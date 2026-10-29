@@ -1,0 +1,6 @@
+[
+  {"name": "R1", "host": "192.0.2.11", "port": 22, "platform": "mikrotik", "group": "lab", "role": "router", "tags": ["backup", "ospf"], "credential_ref": "lab"},
+  {"name": "R2", "host": "192.0.2.12", "port": 22, "platform": "mikrotik", "group": "lab", "role": "router", "tags": ["backup"], "credential_ref": "lab"},
+  {"name": "R3", "host": "192.0.2.13", "port": 22, "platform": "frr", "group": "lab", "role": "router", "tags": ["backup", "ospf"], "credential_ref": "lab"},
+  {"name": "R4", "host": "192.0.2.14", "port": 22, "platform": "frr", "group": "lab", "role": "router", "tags": ["backup"], "credential_ref": "lab"}
+]
