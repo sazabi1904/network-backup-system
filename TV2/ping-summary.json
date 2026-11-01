@@ -1,0 +1,48 @@
+{
+  "lab": "Network-Backup-M1-Smoke-Test",
+  "execution_date": "2026-10-31",
+  "report_date": "2026-11-01",
+  "provenance": "Tổng hợp từ ping-results.json lưu trong phiên lab; không chạy lại khi biên soạn.",
+  "scope": "ICMP từ R1 tới ba router cùng subnet; không phải kiểm thử SSH hoặc ổn định dài hạn.",
+  "results": [
+    {
+      "source": "MikroTik-R1",
+      "target": "192.168.77.12",
+      "sent": 5,
+      "received": 5,
+      "packet_loss_percent": 0,
+      "rtt_ms": {
+        "min": 2.075,
+        "avg": 10.888,
+        "max": 40.271
+      },
+      "passed": true
+    },
+    {
+      "source": "MikroTik-R1",
+      "target": "192.168.77.13",
+      "sent": 5,
+      "received": 5,
+      "packet_loss_percent": 0,
+      "rtt_ms": {
+        "min": 2.185,
+        "avg": 13.525,
+        "max": 54.972
+      },
+      "passed": true
+    },
+    {
+      "source": "MikroTik-R1",
+      "target": "192.168.77.14",
+      "sent": 5,
+      "received": 5,
+      "packet_loss_percent": 0,
+      "rtt_ms": {
+        "min": 3.197,
+        "avg": 14.522,
+        "max": 42.104
+      },
+      "passed": true
+    }
+  ]
+}
