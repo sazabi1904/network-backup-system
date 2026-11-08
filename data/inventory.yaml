@@ -1,0 +1,35 @@
+- name: R1
+  host: 192.0.2.11
+  platform: mikrotik
+  port: 22
+  group: nhom-a
+  role: router
+  tags: [ospf, core]
+  credential_ref: lab
+
+- name: R2
+  host: 192.0.2.12
+  platform: mikrotik
+  port: 22
+  group: nhom-a
+  role: router
+  tags: [core]
+  credential_ref: lab
+
+- name: R3
+  host: 192.0.2.13
+  platform: frr
+  port: 22
+  group: nhom-b
+  role: router
+  tags: [ospf, edge]
+  credential_ref: lab
+
+- name: R4
+  host: 192.0.2.14
+  platform: frr
+  port: 22
+  group: nhom-b
+  role: router
+  tags: [edge]
+  credential_ref: lab
