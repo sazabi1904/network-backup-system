@@ -1,59 +1,130 @@
-"""Offline tests; do not claim these establish connectivity to a real router."""
+"""Offline tests. Optional cross-branch worktrees contain unmodified services."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from core.models import DeviceInfo
+from core.base import NetworkDevice
+from core.factory import DeviceFactory
+from core.exceptions import DeviceAuthenticationError, DeviceTimeoutError, DeviceCommandError, DeviceConnectionError
+from devices.ssh_adapter import SSHAdapter, register_device_adapters
 from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException, ReadTimeout
-from ssh_client import RouterSSH, RouterSSHError, main
+from paramiko import BadHostKeyException
+
+MT = '# 2026-11-09 12:00:00 by RouterOS 7.23.8\n/interface bridge add name=lab\n'
+FRR = 'frr version 8.2.2\nfrr defaults traditional\ninterface eth0\n ip address 192.168.10.25/24\n!\nend\n'
 
 
-class SSHTests(unittest.TestCase):
-    def router(self, platform="mikrotik"):
-        return RouterSSH("192.0.2.1", platform, "lab", "private-test-value")
+class AdapterTests(unittest.TestCase):
+    def setUp(self):
+        self.patch = patch('devices.ssh_adapter.ConnectHandler')
+        self.connect = self.patch.start()
+        self.addCleanup(self.patch.stop)
+        self.session = self.connect.return_value
+        self.info = DeviceInfo('MT-R1', '192.168.10.21', 'mikrotik')
 
-    @patch("ssh_client.ConnectHandler")
-    def test_auth_error_has_no_secret(self, connect):
-        connect.side_effect = NetmikoAuthenticationException("private-test-value")
-        with self.assertRaises(RouterSSHError) as caught:
-            self.router().connect()
-        self.assertNotIn("private-test-value", str(caught.exception))
+    def device(self, platform='mikrotik'):
+        info = self.info if platform == 'mikrotik' else DeviceInfo('FRR-1','192.168.10.25','frr')
+        return SSHAdapter(info, username='backup', password='private-value')
 
-    @patch("ssh_client.ConnectHandler")
-    def test_network_timeout(self, connect):
-        connect.side_effect = NetmikoTimeoutException("raw details")
-        with self.assertRaisesRegex(RouterSSHError, "timed out"):
-            self.router().connect()
+    def test_contract_factory_credentials(self):
+        register_device_adapters()
+        for platform in ['mikrotik','frr']:
+            d = DeviceFactory.create(DeviceInfo('lab','192.0.2.1',platform))
+            self.assertIsInstance(d, NetworkDevice)
+            with patch('devices.ssh_adapter.credentials_from_env', return_value=Mock(username='backup',password='private-value')) as env:
+                d.connect(); env.assert_called_once_with('lab'); d.disconnect()
 
-    @patch("ssh_client.ConnectHandler")
-    def test_read_timeout_still_disconnects(self, connect):
-        connect.return_value.send_command_timing.side_effect = ReadTimeout("raw details")
-        with self.assertRaises(RouterSSHError):
-            with self.router() as router:
-                router.probe()
-        connect.return_value.disconnect.assert_called_once()
+    def test_mikrotik_config(self):
+        self.session.send_command.return_value = MT
+        with self.device() as d:
+            self.assertEqual(d.info,self.info)
+            self.assertEqual(d.get_running_config(),MT)
+        self.assertEqual(self.session.send_command.call_args.args[0],'/export terse')
+        self.assertTrue(self.connect.call_args.kwargs['ssh_strict'])
+        self.session.disconnect.assert_called_once()
 
-    @patch("ssh_client.ConnectHandler")
-    def test_frr_shell_error_is_not_success(self, connect):
-        connect.return_value.send_command_timing.return_value = "sh: show: not found"
-        with self.assertRaisesRegex(RouterSSHError, "vtysh"):
-            with self.router("frr") as router:
-                router.probe()
+    def test_frr_linux(self):
+        self.session.send_command.side_effect = ['FRRouting 8.2.2',FRR]
+        with self.device('frr') as d:
+            d.probe(); self.assertEqual(d.get_running_config(),FRR)
+        self.assertEqual([c.args[0] for c in self.session.send_command.call_args_list],
+                         ['vtysh -c "show version"','vtysh -c "show running-config"'])
 
-    @patch("ssh_client.ConnectHandler")
-    def test_both_platform_probes(self, connect):
-        for platform, output in [("mikrotik", "version: 7.23.8"), ("frr", "FRRouting 8.2.2")]:
-            session = Mock()
-            session.send_command_timing.return_value = output
-            connect.return_value = session
-            with self.router(platform) as router:
-                self.assertEqual(router.probe(), output)
-            self.assertTrue(connect.call_args.kwargs["ssh_strict"])
-            session.disconnect.assert_called_once()
+    def test_vtysh_login(self):
+        self.session.send_command.side_effect = ['% Unknown command: vtysh',FRR]
+        with self.device('frr') as d: self.assertEqual(d.get_running_config(),FRR)
 
-    def test_requires_connection_and_valid_port(self):
-        with self.assertRaises(RouterSSHError):
-            self.router().probe()
-        with self.assertRaises(ValueError):
-            RouterSSH("host", "mikrotik", "lab", "", port=0)
+    def test_invalid_output_closes_session(self):
+        for platform,output in [('mikrotik','failure: private-value'),('mikrotik','version: 7'),
+                                ('frr','frr version 8.2.2\ninterface eth0'),('frr','sh: vtysh: not found'),('frr','')]:
+            self.session.send_command.return_value = output
+            d = self.device(platform); d.connect()
+            with self.assertRaises(DeviceCommandError) as caught: d.get_running_config()
+            self.assertNotIn('private-value',str(caught.exception))
+            self.assertIsNone(d._connection)
+
+    def test_auth_timeout_hostkey_cleanup(self):
+        for exc,expected in [(NetmikoAuthenticationException('private-value'),DeviceAuthenticationError),
+                             (NetmikoTimeoutException('private-value'),DeviceTimeoutError),
+                             (BadHostKeyException('host',Mock(),Mock()),DeviceConnectionError)]:
+            self.session.establish_connection.side_effect = exc
+            with self.assertRaises(expected) as caught: self.device().connect()
+            self.assertNotIn('private-value',str(caught.exception))
+        self.assertEqual(self.session.disconnect.call_count,3)
+
+    def test_read_timeout_cleanup(self):
+        self.session.send_command.side_effect = ReadTimeout('private-value')
+        with self.assertRaises(DeviceTimeoutError):
+            with self.device() as d: d.get_running_config()
+        self.session.disconnect.assert_called_once()
+
+    def test_read_only(self):
+        d = self.device()
+        with self.assertRaises(NotImplementedError): d.push_config(['anything'])
+        with self.assertRaises(NotImplementedError): d.restore_config('anything')
+        with self.assertRaises(DeviceCommandError): d.send_command('/system reboot')
+        self.connect.assert_not_called()
+
+    def test_not_connected(self):
+        with self.assertRaises(DeviceConnectionError): self.device().get_running_config()
+
+    def test_tv4_services(self):
+        root = os.environ.get('TV2_TV4_ROOT')
+        if not root: self.skipTest('Set TV2_TV4_ROOT to TV4 checkout')
+        import services
+        services.__path__.insert(0,str(Path(root)/'services'))
+        from services.backup_manager import BackupManager
+        from services.change_detector import ChangeDetector
+        from services.backup_scheduler import BackupScheduler
+        for platform,content in [('mikrotik',MT),('frr',FRR)]:
+            with tempfile.TemporaryDirectory() as directory:
+                self.session.send_command.return_value = content
+                manager = BackupManager(directory)
+                with self.device(platform) as d:
+                    self.assertTrue(manager.backup(d).success)
+                    meta = json.loads(next(Path(directory).glob('*.json')).read_text())
+                    raw = next(Path(directory).glob('*.cfg')).read_bytes()
+                    self.assertEqual(hashlib.sha256(raw).hexdigest(),meta['sha256'])
+                    self.assertFalse(ChangeDetector(manager).check(d).data['changed'])
+                    self.session.send_command.return_value = content.replace('lab','lab2') if platform == 'mikrotik' else content.replace('.25','.26')
+                    self.assertTrue(ChangeDetector(manager).check(d).data['changed'])
+                self.assertTrue(BackupScheduler(manager).run_once([self.device(platform)])[0].success)
+
+    def test_tv3_services(self):
+        root = os.environ.get('TV2_TV3_ROOT')
+        if not root: self.skipTest('Set TV2_TV3_ROOT to TV3 checkout')
+        import services
+        services.__path__.insert(0,str(Path(root)/'services'))
+        from services.connection_manager import ConnectionManager
+        register_device_adapters()
+        with patch('devices.ssh_adapter.credentials_from_env',return_value=Mock(username='backup',password='private-value')):
+            self.assertTrue(ConnectionManager(max_workers=1).run([self.info])[0].success)
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == '__main__': unittest.main()
