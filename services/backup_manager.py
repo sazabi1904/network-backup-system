@@ -215,23 +215,49 @@ class BackupManager:
             key=lambda s: self._parse_time(s.captured_at),
             reverse=True,
         )
-
     def diff(
         self,
         left: ConfigSnapshot,
-        right: ConfigSnapshot
+        right: ConfigSnapshot,
     ) -> str:
-        """Compare two snapshots of the same device."""
+        """So sanh hai snapshot, bo qua timestamp RouterOS."""
 
         if left.device_name != right.device_name:
             raise ValueError(
                 "Cannot compare snapshots from different devices"
             )
 
+        left_lines = left.content.splitlines(keepends=True)
+        right_lines = right.content.splitlines(keepends=True)
+
+        # Chi bo qua dong timestamp do MikroTik RouterOS tu sinh
+        platforms = ("mikrotik", "routeros")
+
+        if (
+            left.platform.lower() in platforms
+            and right.platform.lower() in platforms
+        ):
+            timestamp_pattern = re.compile(
+                r"^#\s+\d{4}-\d{2}-\d{2}\s+"
+                r"\d{2}:\d{2}:\d{2}\s+by RouterOS\b"
+            )
+
+            left_lines = [
+                line
+                for line in left_lines
+                if not timestamp_pattern.match(line)
+            ]
+
+            right_lines = [
+                line
+                for line in right_lines
+                if not timestamp_pattern.match(line)
+            ]
+
         return "".join(
             difflib.unified_diff(
-                left.content.splitlines(keepends=True),
-                right.content.splitlines(keepends=True),
+                left_lines,
+                right_lines,
                 fromfile=left.snapshot_id,
                 tofile=right.snapshot_id,
             )
