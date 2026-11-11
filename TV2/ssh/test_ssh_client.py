@@ -69,14 +69,16 @@ class AdapterTests(unittest.TestCase):
             self.assertNotIn('private-value',str(caught.exception))
             self.assertIsNone(d._connection)
 
-    def test_auth_timeout_hostkey_cleanup(self):
+    def test_auth_timeout_hostkey_errors(self):
         for exc,expected in [(NetmikoAuthenticationException('private-value'),DeviceAuthenticationError),
                              (NetmikoTimeoutException('private-value'),DeviceTimeoutError),
                              (BadHostKeyException('host',Mock(),Mock()),DeviceConnectionError)]:
-            self.session.establish_connection.side_effect = exc
-            with self.assertRaises(expected) as caught: self.device().connect()
+            self.connect.side_effect = exc
+            device = self.device()
+            with self.assertRaises(expected) as caught:
+                device.connect()
             self.assertNotIn('private-value',str(caught.exception))
-        self.assertEqual(self.session.disconnect.call_count,3)
+            self.assertIsNone(device._connection)
 
     def test_read_timeout_cleanup(self):
         self.session.send_command.side_effect = ReadTimeout('private-value')
