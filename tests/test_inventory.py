@@ -1,3 +1,4 @@
+import json
 import pytest
 
 from core.models import DeviceInfo
@@ -50,3 +51,32 @@ def test_invalid_port_keeps_inventory(tmp_path, monkeypatch, bad_port):
         inventory.update_device("R1", port=bad_port)
 
     assert inventory.list_devices() == before
+
+@pytest.mark.parametrize("operation", ["load", "add", "update"])
+@pytest.mark.parametrize("bad_host", ["not-an-ip", "999.0.0.1", "192.0.2", ""])
+def test_invalid_ip_preserves_inventory(tmp_path, operation, bad_host):
+    inventory = InventoryManager(tmp_path / "inventory.json")
+    inventory.add_device(DeviceInfo("R1", "192.0.2.11", "mikrotik"))
+    before = inventory.list_devices()
+    if operation == "load":
+        inventory.path.write_text(json.dumps([
+            {"name": "R2", "host": bad_host, "platform": "frr"},
+        ]), encoding="utf-8")
+    with pytest.raises(ValueError):
+        if operation == "load":
+            inventory.load()
+        elif operation == "add":
+            inventory.add_device(DeviceInfo("R2", bad_host, "frr"))
+        else:
+            inventory.update_device("R1", name="renamed", host=bad_host)
+    assert inventory.list_devices() == before
+
+
+@pytest.mark.parametrize("host", ["192.0.2.12", "2001:db8::1"])
+def test_valid_ip_round_trip(tmp_path, host):
+    inventory = InventoryManager(tmp_path / "inventory.json")
+    inventory.add_device(DeviceInfo("R1", host, "mikrotik"))
+    inventory.update_device("R1", host=host)
+    expected = inventory.list_devices()
+    inventory.save()
+    assert InventoryManager(inventory.path).load() == expected

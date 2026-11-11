@@ -120,3 +120,53 @@ def test_operation_receives_connected_device(tmp_path, monkeypatch):
     assert result.data["marker"] == "retained"
     assert result.data["connection_status"] == "online"
     assert result.data["device_info"]["host"] == info.host
+
+@pytest.mark.parametrize("fail_init", [False, True])
+@pytest.mark.parametrize("error_type", [OSError, PermissionError])
+def test_logging_failure_preserves_results(monkeypatch, fail_init, error_type):
+    class BrokenLogger:
+        def __init__(self):
+            if fail_init:
+                raise error_type("sensitive detail")
+
+        def log(self, *args, **kwargs):
+            raise error_type("sensitive detail")
+
+    monkeypatch.setattr("services.connection_manager.AuditLogger", BrokenLogger)
+    results = ConnectionManager(demo=True).run([
+        DeviceInfo("R1", "192.0.2.11", "mikrotik"),
+        DeviceInfo("R2", "192.0.2.12", "frr"),
+    ])
+    assert [result.device for result in results] == ["R1", "R2"]
+    assert all(result.success for result in results)
+    assert all(result.data["logging_error"] == error_type.__name__ for result in results)
+    assert "sensitive detail" not in str(results)
+
+
+def test_disconnect_log_failure_preserves_results(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    class DisconnectFailure(FakeDevice):
+        def disconnect(self):
+            super().disconnect()
+            raise DeviceConnectionError("sensitive disconnect detail")
+
+    monkeypatch.setattr(
+        "services.connection_manager.DeviceFactory.create",
+        lambda info, demo=False: DisconnectFailure(info),
+    )
+    manager = ConnectionManager(demo=True)
+    logged_actions = []
+
+    def fail_disconnect_log(*args, **kwargs):
+        logged_actions.append(args[2])
+        if args[2] == "disconnect":
+            raise PermissionError("sensitive log detail")
+
+    monkeypatch.setattr(manager.logger, "log", fail_disconnect_log)
+    result = manager.run([DeviceInfo("R1", "192.0.2.11", "mikrotik")])[0]
+    assert result.success is True
+    assert logged_actions == ["check_connection", "disconnect"]
+    assert result.data["disconnect_error"] == "DeviceConnectionError"
+    assert result.data["logging_error"] == "PermissionError"
+    assert "sensitive" not in str(result)

@@ -1,7 +1,9 @@
 # Thành viên 3 – Inventory, kiểm tra khả dụng và thu thập thông tin
 
 **Đề tài:** Hệ thống sao lưu và khôi phục cấu hình tập trung  
-**Ngày cập nhật:** 09/11/2026
+**Ngày cập nhật:** 11/11/2026
+
+**Yêu cầu:** Python 3.10 trở lên.
 
 ## Phạm vi nhiệm vụ
 
@@ -38,6 +40,7 @@ Lớp `InventoryManager` hỗ trợ:
 - `remove_device()`: xóa thiết bị.
 - `save()`: lưu Inventory an toàn.
 - Kiểm tra port hợp lệ từ `1` đến `65535`.
+- Kiểm tra IPv4/IPv6 khi đọc, thêm và sửa; thao tác không hợp lệ giữ nguyên Inventory trong bộ nhớ.
 
 ## Kết nối đồng thời
 
@@ -52,6 +55,8 @@ Mỗi thiết bị được:
 5. Ghi nhận kết quả và mã lỗi riêng.
 
 Một router offline hoặc timeout không làm dừng các router còn lại.
+
+Lỗi hệ thống tệp khi tạo hoặc ghi audit log không làm mất kết quả thiết bị. Trường `TaskResult.data["logging_error"]` chứa tên loại lỗi; không chứa nội dung lỗi có thể lộ thông tin nhạy cảm.
 
 ## Thu thập thông tin
 
@@ -81,6 +86,7 @@ Collector hỗ trợ:
 - `export_json()`: xuất báo cáo JSON có cấu trúc.
 - `export_csv()`: xuất một dòng cho mỗi thiết bị.
 - Loại bỏ output thô và tham chiếu xác thực khỏi báo cáo.
+- Che các trường và chuỗi chứa từ khóa nhạy cảm trong section lồng nhau bằng `[REDACTED]`, giữ nguyên dữ liệu gốc. Bộ lọc dựa trên từ khóa, không bảo đảm nhận diện mọi bí mật trong văn bản tự do.
 - `get_verification_data()`: cung cấp bản sao an toàn của interface, route và OSPF cho TV5.
 
 
@@ -92,10 +98,10 @@ Chạy toàn bộ test:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Kết quả ngày 09/11/2026:
+Kết quả ngày 11/11/2026:
 
 ```text
-34 passed in 1.38s
+54 passed
 ```
 
 Bộ test bao gồm trường hợp quản lý 4 router đồng thời và xác nhận một router offline không làm dừng ba router còn lại.
@@ -103,6 +109,10 @@ Bộ test bao gồm trường hợp quản lý 4 router đồng thời và xác 
 ## Giới hạn hiện tại
 
 Các chức năng đã được kiểm thử bằng `FakeDevice` và adapter mô phỏng.
+
+Các test hồi quy kiểm tra IP sai khi đọc/thêm/sửa, lưu và đọc lại IPv4/IPv6, lỗi tạo/ghi log và che dữ liệu nhạy cảm khi xuất JSON/CSV mà không sửa dữ liệu gốc.
+
+`main.py` chưa tích hợp service TV3. Timeout kết nối và lệnh cần được cấu hình tại adapter TV2 trước khi kiểm thử router thật.
 
 Việc kiểm thử SSH trực tiếp trên GNS3 vẫn phụ thuộc vào:
 

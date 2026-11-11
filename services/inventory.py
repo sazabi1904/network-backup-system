@@ -1,4 +1,5 @@
 import json
+import ipaddress
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -48,6 +49,7 @@ class InventoryManager:
                 if not isinstance(raw.get(field), str) or not raw[field].strip():
                     raise ValueError("Thiếu hoặc sai name, host, platform")
 
+            self._validate_ip(raw["host"])
             self._validate_port(raw.get("port", 22))
             info = DeviceInfo.from_mapping(raw)
             if info.name in loaded_devices:
@@ -91,6 +93,7 @@ class InventoryManager:
             if not isinstance(raw[field], str) or not raw[field].strip():
                 raise ValueError("Thiếu hoặc sai name, host, platform")
 
+        self._validate_ip(raw["host"])
         self._validate_port(raw.get("port", 22))
         info = DeviceInfo.from_mapping(raw)
         if info.name in self._devices:
@@ -112,6 +115,7 @@ class InventoryManager:
             if not isinstance(raw[field], str) or not raw[field].strip():
                 raise ValueError("Thiếu hoặc sai name, host, platform")
 
+        self._validate_ip(raw["host"])
         self._validate_port(raw.get("port", 22))
         info = DeviceInfo.from_mapping(raw)
         if info.name != device_name and info.name in self._devices:
@@ -167,6 +171,15 @@ class InventoryManager:
         finally:
             if temp_path is not None:
                 temp_path.unlink(missing_ok=True)
+
+    @staticmethod
+    def _validate_ip(host: str) -> None:
+        """Kiểm tra IPv4/IPv6 theo cách chuẩn hóa host của DeviceInfo."""
+        try:
+            ipaddress.ip_address(host.strip())
+        except ValueError:
+            raise ValueError("Địa chỉ IP không hợp lệ") from None
+
     @staticmethod
     def _validate_port(port: int) -> None:
         if type(port) is not int or not 1 <= port <= 65535:

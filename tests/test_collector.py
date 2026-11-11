@@ -1,3 +1,4 @@
+from copy import deepcopy
 from core.fake_device import FakeDevice
 from core.models import DeviceInfo, TaskResult
 from services.collector import Collector
@@ -484,3 +485,37 @@ def test_four_device_collection_isolates_offline_router(
     assert results[0].data["summary"]["status"] == "success"
     assert results[2].data["summary"]["status"] == "partial"
     assert results[3].data["summary"]["status"] == "partial"
+
+def test_exports_redact_nested_secrets_without_changing_source(tmp_path):
+    sections = {"interfaces": {
+        "status": "success", "error_code": None,
+        "data": [{
+            "name": "ether1",
+            "comment": 'password="demo secret value"',
+            "nested": {
+                "private_key": "key-material",
+                "credential_ref": "private-lab",
+                "values": ["token=hidden-value", "normal description"],
+            },
+        }],
+    }}
+    original = deepcopy(sections)
+    result = TaskResult("R1", "collect", True, "OK", data={"sections": sections})
+    json_path = Collector.export_json([result], tmp_path / "report.json")
+    csv_path = Collector.export_csv([result], tmp_path / "report.csv")
+    json_sections = json.loads(json_path.read_text(encoding="utf-8"))[0]["sections"]
+    with csv_path.open(encoding="utf-8-sig", newline="") as file:
+        csv_sections = json.loads(next(csv.DictReader(file))["sections_json"])
+    assert json_sections == csv_sections
+    record = json_sections["interfaces"]["data"][0]
+    assert record["name"] == "ether1"
+    assert record["comment"] == "[REDACTED]"
+    assert record["nested"]["values"] == ["[REDACTED]", "normal description"]
+    for path in (json_path, csv_path):
+        content = path.read_text(encoding="utf-8-sig")
+        for secret in ("demo secret value", "key-material", "private-lab", "hidden-value"):
+            assert secret not in content
+    assert sections == original
+    report = Collector._build_report_record(result)
+    report["sections"]["interfaces"]["data"][0]["name"] = "changed"
+    assert sections == original

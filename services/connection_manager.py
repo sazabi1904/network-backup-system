@@ -27,9 +27,30 @@ class ConnectionManager:
 
         self.max_workers = max_workers
         self.demo = demo
-        self.logger = AuditLogger()
+        self._logger_error = None
+        try:
+            self.logger = AuditLogger()
+        except OSError as exc:
+            self.logger = None
+            self._logger_error = type(exc).__name__
         self.operator = getenv("APP_OPERATOR", "tv3")
     
+    def _log_result(
+        self, result: TaskResult, action: str, success: bool,
+        error_code: Optional[str],
+    ) -> None:
+        """Giữ kết quả thiết bị khi tạo hoặc ghi audit log thất bại."""
+        if self.logger is None:
+            result.data["logging_error"] = self._logger_error
+            return
+        try:
+            self.logger.log(
+                self.operator, result.device, action, success,
+                error_code=error_code,
+            )
+        except OSError as exc:
+            result.data["logging_error"] = type(exc).__name__
+
     @staticmethod
     def _connection_error_status(error: Exception) -> str:
         """Phân loại lỗi để đưa vào báo cáo kết nối."""
@@ -136,15 +157,13 @@ class ConnectionManager:
         results = [completed[index] for index in range(len(device_infos))]
 
         for result in results:
-            self.logger.log(
-                self.operator, result.device, result.action, result.success,
-                error_code=result.error_code,
+            self._log_result(
+                result, result.action, result.success, result.error_code,
             )
 
             if "disconnect_error" in result.data:
-                self.logger.log(
-                    self.operator, result.device, "disconnect", False,
-                    error_code=result.data["disconnect_error"],
+                self._log_result(
+                    result, "disconnect", False, result.data["disconnect_error"],
                 )
 
         return results

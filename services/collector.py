@@ -9,6 +9,7 @@ from pathlib import Path
 import json
 import csv
 from copy import deepcopy
+from services.logger import SENSITIVE_TOKENS
 
 
 
@@ -571,8 +572,33 @@ class Collector:
             "error_code": "UnsupportedFeatureError",
         }
 
-    @staticmethod
+    @classmethod
+    def _sanitize_report_data(cls, value):
+        """Che dữ liệu nhạy cảm lồng nhau mà không sửa dữ liệu gốc.
+
+        Bộ lọc dựa trên từ khóa; chuỗi có từ khóa được che toàn bộ.
+        """
+        def sensitive(text: str) -> bool:
+            normalized = text.lower().replace("_", "-")
+            return any(token in normalized for token in SENSITIVE_TOKENS) or (
+                "credential" in normalized
+            )
+
+        if isinstance(value, dict):
+            return {
+                key: "[REDACTED]" if sensitive(str(key))
+                else cls._sanitize_report_data(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, (list, tuple)):
+            return [cls._sanitize_report_data(item) for item in value]
+        if isinstance(value, str) and sensitive(value):
+            return "[REDACTED]"
+        return value
+
+    @classmethod
     def _build_report_record(
+        cls,
         result: TaskResult,
     ) -> dict:
         """Tạo bản ghi báo cáo từ một TaskResult."""
@@ -618,7 +644,7 @@ class Collector:
             "summary_status": summary.get("status"),
             "message": result.message,
             "error_code": result.error_code,
-            "sections": data.get("sections"),
+            "sections": cls._sanitize_report_data(data.get("sections")),
         }
 
     @classmethod
