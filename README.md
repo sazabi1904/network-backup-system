@@ -1,11 +1,11 @@
 # Network Backup System — Project khung TV1
 
-> **Chi la project khung + demo FakeDevice.** Chua ket noi GNS3, chua co Inventory CRUD, BackupScheduler, RestoreManager hay Cấu hình hàng loạt that. Cac module do do TV2-TV5 phat trien.
+> **Da co project khung TV1 va service TV3.** TV3 da co Inventory CRUD, ket noi dong thoi, Collector va xuat JSON/CSV; da kiem thu bang thiet bi mo phong. Main CLI chua tich hop service TV3 va chua ket noi GNS3. BackupScheduler, RestoreManager va cau hinh hang loat do TV4-TV5 phat trien.
 
 ## Yeu cau
 
 - Windows 11, VS Code, Git
-- Python 3.9 tro len (khuyen nghi 3.11)
+- Python 3.10 tro len (khuyen nghi 3.11)
 
 ## Chay tren Windows (PowerShell)
 
@@ -23,11 +23,13 @@ Neu muon dung `python` thay vi duong dan `.venv\Scripts\python.exe`, kich hoat P
 
 - TV1: core/*, main.py, services/logger.py; on dinh API, logging, security, tich hop
 - TV2: devices/mikrotik.py, devices/frr.py + GNS3; dang ky adapter voi Factory
-- TV3: services/inventory.py, connection.py, collector.py
+- TV3: services/inventory.py, services/connection_manager.py, services/collector.py
 - TV4: services/backup.py, version_manager.py, config_diff.py, scheduler
 - TV5: services/restore.py, config_manager.py, verification.py, templates/
 
 Xem `docs/API_CONTRACTS.md` va `docs/HUONG_DAN_TV1.md`.
+
+Chi tiet chuc nang va kiem thu TV3: [TV3/README.md](TV3/README.md).
 
 ## Luu y
 
