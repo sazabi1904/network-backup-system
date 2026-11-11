@@ -58,15 +58,13 @@ class SSHAdapter(NetworkDevice):
                       device_type=self.DRIVERS[self.info.platform], username=username,
                       password=password, conn_timeout=self.timeout,
                       auth_timeout=self.timeout, banner_timeout=self.timeout,
-                      ssh_strict=True, system_host_keys=True, auto_connect=False,
+                      ssh_strict=True, system_host_keys=True,
                       allow_agent=False, use_keys=False)
         if self.known_hosts:
             params.update(alt_host_keys=True, alt_key_file=self.known_hosts)
         try:
-            # Keep a handle before authentication/session preparation so failures close it.
+            # Let Netmiko open and prepare the SSH session.
             self._connection = ConnectHandler(**params)
-            self._connection.establish_connection()
-            self._connection.session_preparation()
         except NetmikoAuthenticationException:
             self._close_on_error()
             raise DeviceAuthenticationError("SSH authentication failed") from None
