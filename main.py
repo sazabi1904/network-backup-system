@@ -292,20 +292,20 @@ def _inventory_menu():
                 manager.add_device(added)
                 if input("Ghi thay doi vao inventory.yaml? [y/N]: ").strip().lower() == "y":
                     manager.save()
-                    print("Da luu Inventory.")
+                    print("Đã lưu Inventory.")
                 else:
-                    print("Da huy, khong thay doi file.")
+                    print("Đã hủy, không thay đổi file.")
             elif choice == "4":
                 selected = _select_infos(infos, allow_all=False)
                 if not selected:
                     continue
                 info = selected[0]
-                name = input(f"Ten moi [{info.name}]: ").strip() or info.name
-                host = input(f"IP moi [{info.host}]: ").strip() or info.host
-                port = input(f"Port moi [{info.port}]: ").strip() or str(info.port)
-                group = input(f"Group moi [{info.group}]: ").strip() or info.group
-                role = input(f"Role moi [{info.role}]: ").strip() or info.role
-                platform = input(f"Platform moi [{info.platform}]: ").strip().lower() or info.platform
+                name = input(f"Tên mới [{info.name}]: ").strip() or info.name
+                host = input(f"IP mới [{info.host}]: ").strip() or info.host
+                port = input(f"Port mới [{info.port}]: ").strip() or str(info.port)
+                group = input(f"Group mới [{info.group}]: ").strip() or info.group
+                role = input(f"Role mới [{info.role}]: ").strip() or info.role
+                platform = input(f"Platform mới [{info.platform}]: ").strip().lower() or info.platform
                 if platform not in {"mikrotik", "frr"}:
                     print("Platform ho tro: mikrotik hoac frr")
                     continue
@@ -347,8 +347,8 @@ def _connection_collection_menu(collect):
         selected = _select_infos(infos)
         if not selected:
             return
-        print("\nCan GNS3 va host key SSH da duoc xac minh.")
-        print("Mat khau nhap rieng cho tung router, khong ghi vao file/Git.")
+        print("\nCần GNS3 và host key SSH đã được xác minh.")
+        print("Mật khẩu nhập riêng cho từng router.")
         runtime_infos = []
         previous_env = {}
         try:
@@ -487,15 +487,15 @@ def run_full_menu():
         print("=" * 65)
         print("1. TV1 - Core / Factory / FakeDevice self-test")
         print("2. TV1 - Menu demo OOP va AuditLogger")
-        print("3. TV2 - Kiem tra ket noi SSH router GNS3")
-        print("4. TV3 - Inventory (xem, loc, them, sua, xoa)")
+        print("3. TV2 - Kiểm tra kết nối SSH router GNS3")
+        print("4. TV3 - Inventory (xem, lọc, thêm, sửa, xóa)")
         print("5. TV3 - Collector: thu thap qua SSH va xuat JSON/CSV")
         print("6. TV4 - Backup / Change / Version / Scheduler / Report / Diff")
         print("7. TV5 - OSPF dry-run / deploy demo / restore demo")
-        print("0. Thoat")
-        choice = _read_choice("Chon chuc nang: ", set("01234567"))
+        print("0. Thoát")
+        choice = _read_choice("Chọn chức năng: ", set("01234567"))
         if choice == "0":
-            print("Da thoat chuong trinh chung.")
+            print("Thoat chuong trinh.")
             return
         try:
             if choice == "1":
@@ -523,4 +523,4 @@ if __name__ == "__main__":
     try:
         main()
     except (KeyboardInterrupt, EOFError):
-        print("\nDa thoat chuong trinh.")
+        print("\n Đã thoát chương trình.")
