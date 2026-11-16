@@ -479,45 +479,73 @@ def _tv5_menu():
         _pause()
 
 
+def _tv1_menu():
+    """TV1: kiem tra core va demo OOP."""
+    while True:
+        print("\n=== TV1 - CORE / DEMO ===")
+        print("1. Self-test FakeDevice (Factory + FakeDevice)")
+        print("2. Menu demo OOP va AuditLogger")
+        print("0. Quay lai")
+        choice = _read_choice("Chon: ", set("012"))
+        if choice == "0":
+            return
+        if choice == "1":
+            print("[TV1] Ket qua:", "PASS" if run_self_test() else "FAIL")
+            _pause()
+        else:
+            run_cli()
+
+
+def _tv3_menu():
+    """TV3: inventory va collector."""
+    while True:
+        print("\n=== TV3 - INVENTORY & COLLECTOR ===")
+        print("1. Inventory (xem, loc, them, sua, xoa)")
+        print("2. Collector: thu thap qua SSH va xuat JSON/CSV")
+        print("0. Quay lai")
+        choice = _read_choice("Chon: ", set("012"))
+        if choice == "0":
+            return
+        if choice == "1":
+            _inventory_menu()
+        else:
+            _connection_collection_menu(True)
+            _pause()
+
+
 def run_full_menu():
-    """Menu cua ca nhom; TV4 duoc goi truc tiep qua main_TV4.main()."""
+    """Menu chung cua nhom: moi thanh vien mot muc, ben trong chia nho theo chuc nang."""
     while True:
         print("\n" + "=" * 65)
         print("     NETWORK BACKUP SYSTEM - MENU CHUNG TV1 / TV2 / TV3 / TV4 / TV5")
         print("=" * 65)
-        print("1. TV1 - Core / Factory / FakeDevice self-test")
-        print("2. TV1 - Menu demo OOP va AuditLogger")
-        print("3. TV2 - Kiểm tra kết nối SSH router GNS3")
-        print("4. TV3 - Inventory (xem, lọc, thêm, sửa, xóa)")
-        print("5. TV3 - Collector: thu thap qua SSH va xuat JSON/CSV")
-        print("6. TV4 - Backup / Change / Version / Scheduler / Report / Diff")
-        print("7. TV5 - OSPF dry-run / deploy demo / restore demo")
+        print("1. TV1 - Core va demo OOP")
+        print("2. TV2 - Kiểm tra kết nối SSH router GNS3")
+        print("3. TV3 - Inventory va Collector")
+        print("4. TV4 - Backup / Change / Version / Scheduler / Report / Diff")
+        print("5. TV5 - OSPF dry-run / deploy demo / restore demo")
         print("0. Thoát")
-        choice = _read_choice("Chọn chức năng: ", set("01234567"))
+        choice = _read_choice("Chọn chức năng: ", set("012345"))
         if choice == "0":
-            print("Thoat chuong trinh.")
+            print("Đã thoát chương trình chung.")
             return
         try:
             if choice == "1":
-                print("[TV1] Ket qua:", "PASS" if run_self_test() else "FAIL")
+                _tv1_menu()
             elif choice == "2":
-                run_cli()
-            elif choice == "3":
                 _connection_collection_menu(False)
+                _pause()
+            elif choice == "3":
+                _tv3_menu()
             elif choice == "4":
-                _inventory_menu()
-            elif choice == "5":
-                _connection_collection_menu(True)
-            elif choice == "6":
                 # Tich hop nguyen menu TV4 da kiem thu, khong sao chep hoac doi logic.
                 from main_TV4 import main as tv4_main
                 tv4_main()
-            elif choice == "7":
+            elif choice == "5":
                 _tv5_menu()
-            if choice in {"1", "3", "5"}:
-                _pause()
         except (KeyboardInterrupt, EOFError):
-            print("\nDa dung thao tac, quay ve menu chung.")
+            print("\nĐã dừng thao tác, quay về menu chung.")
+
 
 if __name__ == "__main__":
     try:
