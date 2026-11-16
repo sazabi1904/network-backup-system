@@ -1,6 +1,6 @@
 # Network Backup System — Project khung TV1
 
-> **Da co project khung TV1 va service TV3.** TV3 da co Inventory CRUD, ket noi dong thoi, Collector va xuat JSON/CSV; da kiem thu bang thiet bi mo phong. Main CLI chua tich hop service TV3 va chua ket noi GNS3. BackupScheduler, RestoreManager va cau hinh hang loat do TV4-TV5 phat trien.
+> **Da ghep adapter SSH TV2 voi service TV3 qua main.py.** CLI doc Inventory, kiem tra ket noi, thu thap MikroTik/FRR va xuat JSON/CSV. Luong tich hop duoc kiem thu voi transport SSH mo phong. Nghiem thu SSH tren router GNS3 van can thuc hien trong lab.
 
 ## Yeu cau
 
@@ -30,6 +30,17 @@ Neu muon dung `python` thay vi duong dan `.venv\Scripts\python.exe`, kich hoat P
 Xem `docs/API_CONTRACTS.md` va `docs/HUONG_DAN_TV1.md`.
 
 Chi tiet chuc nang va kiem thu TV3: [TV3/README.md](TV3/README.md).
+
+## Chay luong TV2 va TV3
+
+Chuan bi Inventory voi IP router, thong tin dang nhap trong moi truong va host key da xac minh theo [huong dan ghep TV2-TV3](TV2/GHEP_TV2_TV3.md).
+
+```powershell
+.\.venv\Scripts\python.exe main.py --check-connections --inventory data/inventory.yaml
+.\.venv\Scripts\python.exe main.py --collect --inventory data/inventory.yaml --output-dir reports/tv2-tv3
+```
+
+File `data/inventory.yaml` chua IP minh hoa. Cap nhat ban Inventory cuc bo truoc khi chay SSH. Dung `--group`, `--role`, `--tag` de loc thiet bi, `--workers` va `--timeout` de dieu chinh ket noi.
 
 ## Luu y
 
