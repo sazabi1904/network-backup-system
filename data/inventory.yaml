@@ -1,5 +1,6 @@
-- name: R1
-  host: 192.0.2.11
+
+- name: MikroTik-R1
+  host: 192.168.77.11
   platform: mikrotik
   port: 22
   group: nhom-a
@@ -7,8 +8,8 @@
   tags: [ospf, core]
   credential_ref: lab
 
-- name: R2
-  host: 192.0.2.12
+- name: MikroTik-R2
+  host: 192.168.77.12
   platform: mikrotik
   port: 22
   group: nhom-a
@@ -16,8 +17,8 @@
   tags: [core]
   credential_ref: lab
 
-- name: R3
-  host: 192.0.2.13
+- name: FRR-R3
+  host: 192.168.77.13
   platform: frr
   port: 22
   group: nhom-b
@@ -25,8 +26,8 @@
   tags: [ospf, edge]
   credential_ref: lab
 
-- name: R4
-  host: 192.0.2.14
+- name: FRR-R4
+  host: 192.168.77.14
   platform: frr
   port: 22
   group: nhom-b
