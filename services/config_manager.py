@@ -6,7 +6,7 @@ from core.base import NetworkDevice
 from core.models import TaskResult, ConfigSnapshot
 from services.restore import RestoreManager
 from services.verification import VerificationService
-from services.exceptions import DeviceCommandError
+from core.exceptions import DeviceCommandError
 
 logger = logging.getLogger(__name__)
 

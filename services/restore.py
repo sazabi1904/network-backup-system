@@ -3,7 +3,7 @@ from typing import Any
 from core.base import NetworkDevice
 from core.models import ConfigSnapshot, TaskResult
 from services.verification import VerificationService
-from services.exceptions import DeviceRestoreError
+from core.exceptions import DeviceRestoreError
 
 logger = logging.getLogger(__name__)
 
