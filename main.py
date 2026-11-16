@@ -3,6 +3,7 @@ import argparse
 import json
 import math
 import os
+import sys
 from pathlib import Path
 from typing import Dict
 
@@ -45,41 +46,8 @@ def run_self_test(logger=None) -> bool:
     return True
 
 
-def _run_demo_action(choice: str, devices, audit, operator: str) -> None:
-    """Chay mot lua chon cua menu FakeDevice."""
-    if choice == "1":
-        for d in devices.values():
-            print(f"  {d.info.name}: {d.info.platform} - {d.info.host} (IP gia)")
-    elif choice in ("2", "3"):
-        device = devices["R1"]
-        try:
-            device.connect()
-            before = device.get_running_config()
-            print("Before:", repr(before))
-            if choice == "3":
-                cmds = ["! simulated-demo-change"]
-                device.push_config(cmds)
-                print("After:", repr(device.get_running_config()))
-                restored = device.restore_config(before)
-                print("Restored (FAKE):", restored)
-                audit.log(operator, "R1", "fake_restore", restored, cmds)
-            else:
-                audit.log(operator, "R1", "fake_get_config", True)
-        except Exception as exc:
-            # Chi log ma loi, khong ghi exception message co the lo secrets
-            audit.log(operator, "R1", "fake_demo", False,
-                      error_code=type(exc).__name__)
-            print("Loi:", type(exc).__name__)
-        finally:
-            device.disconnect()
-    elif choice == "4":
-        print("Thu thap SSH: python main.py --collect --inventory <file YAML/JSON>")
-    else:
-        print("Lua chon khong hop le")
-
-
 def run_cli() -> None:
-    """Menu FakeDevice: moi lua chon chay mot lan; nhap 0 sau khi chay de ve menu chinh."""
+    """CLI cho phan loi; menu day du se goi cac service cua TV3-TV5."""
     devices = make_demo_devices()
     audit = AuditLogger()
     operator = os.getenv("APP_OPERATOR", "local_demo")
@@ -93,12 +61,36 @@ def run_cli() -> None:
         choice = input("Nhap lua chon: ").strip()
         if choice == "0":
             print("Tam biet!")
-            return
-        _run_demo_action(choice, devices, audit, operator)
-        back = input("Nhan 0 de ve menu chinh (phim khac de thoat): ").strip()
-        if back != "0":
-            print("Tam biet!")
-            return
+            break
+        if choice == "1":
+            for d in devices.values():
+                print(f"  {d.info.name}: {d.info.platform} - {d.info.host} (IP gia)")
+        elif choice in ("2", "3"):
+            device = devices["R1"]
+            try:
+                device.connect()
+                before = device.get_running_config()
+                print("Before:", repr(before))
+                if choice == "3":
+                    cmds = ["! simulated-demo-change"]
+                    device.push_config(cmds)
+                    print("After:", repr(device.get_running_config()))
+                    restored = device.restore_config(before)
+                    print("Restored (FAKE):", restored)
+                    audit.log(operator, "R1", "fake_restore", restored, cmds)
+                else:
+                    audit.log(operator, "R1", "fake_get_config", True)
+            except Exception as exc:
+                # Chi log ma loi, khong ghi exception message co the lo secrets
+                audit.log(operator, "R1", "fake_demo", False,
+                          error_code=type(exc).__name__)
+                print("Loi:", type(exc).__name__)
+            finally:
+                device.disconnect()
+        elif choice == "4":
+            print("Thu thap SSH: python main.py --collect --inventory <file YAML/JSON>")
+        else:
+            print("Lua chon khong hop le")
 
 
 def run_inventory(args) -> int:
@@ -153,6 +145,13 @@ def run_inventory(args) -> int:
 
 
 def main(argv=None) -> None:
+    # Giu nguyen cac lenh CLI cu de khong pha bo test/automation cua TV1-TV3.
+    if argv is None:
+        argv = sys.argv[1:]
+    if not argv:
+        run_full_menu()
+        return
+
     parser = argparse.ArgumentParser(description="Network Backup System")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--demo", action="store_true", help="Menu dung FakeDevice (khong SSH)")
@@ -179,9 +178,349 @@ def main(argv=None) -> None:
         parser.error("--inventory can --check-connections hoac --collect")
     if args.self_test:
         raise SystemExit(0 if run_self_test() else 1)
-    # Khong chon che do nao: mo menu FakeDevice (khong SSH, an toan).
-    run_cli()
+    if args.demo:
+        run_cli()
+    else:
+        parser.print_help()
 
+
+
+
+# ================================================================
+# MENU TICH HOP TV1 - TV5
+# Giu nguyen --self-test/--demo/--collect/--check-connections cua TV1.
+# ================================================================
+PROJECT_DIR = Path(__file__).resolve().parent
+LAB_INVENTORY = PROJECT_DIR / "data" / "inventory.yaml"
+
+
+def _pause():
+    input("\nNhan Enter de tiep tuc...")
+
+
+def _read_choice(prompt, valid):
+    while True:
+        choice = input(prompt).strip()
+        if choice in valid:
+            return choice
+        print("Lua chon khong hop le.")
+
+
+def _load_lab_inventory():
+    from services.inventory import InventoryManager
+
+    manager = InventoryManager(LAB_INVENTORY)
+    return manager, manager.load()
+
+
+def _select_infos(infos, *, allow_all=True):
+    """Chon thiet bi tu Inventory (khong khai bao lai dia chi IP)."""
+    if not infos:
+        print("Inventory dang rong.")
+        return []
+    print("\n--- CHON THIET BI ---")
+    for i, info in enumerate(infos, 1):
+        print(f"{i}. {info.name} | {info.host} | {info.platform}")
+    all_choice = str(len(infos) + 1)
+    if allow_all:
+        print(f"{all_choice}. Tat ca thiet bi")
+    print("0. Quay lai")
+    valid = {str(i) for i in range(1, len(infos) + 1)} | {"0"}
+    if allow_all:
+        valid.add(all_choice)
+    selected = _read_choice("Lua chon: ", valid)
+    if selected == "0":
+        return []
+    if allow_all and selected == all_choice:
+        return infos
+    return [infos[int(selected) - 1]]
+
+
+def _print_inventory(infos):
+    if not infos:
+        print("Khong co thiet bi phu hop.")
+    for info in infos:
+        print(
+            f"{info.name:14} {info.host:16} {info.platform:9} "
+            f"port={info.port} group={info.group} role={info.role} "
+            f"tags={','.join(info.tags) or '-'}"
+        )
+
+
+def _inventory_menu():
+    """Inventory cua TV3: xem/loc va them/sua/xoa qua API goc."""
+    from core.models import DeviceInfo
+
+    while True:
+        print("\n=== TV3 - INVENTORY ===")
+        print("1. Xem toan bo danh sach")
+        print("2. Loc theo group / role / tag")
+        print("3. Them thiet bi")
+        print("4. Sua thong tin thiet bi")
+        print("5. Xoa thiet bi")
+        print("0. Quay lai")
+        choice = _read_choice("Chon: ", set("012345"))
+        if choice == "0":
+            return
+        try:
+            manager, infos = _load_lab_inventory()
+            if choice == "1":
+                _print_inventory(infos)
+            elif choice == "2":
+                group = input("Group (Enter: bo qua): ").strip() or None
+                role = input("Role (Enter: bo qua): ").strip() or None
+                tag = input("Tag (Enter: bo qua): ").strip() or None
+                _print_inventory(manager.list_devices(group=group, role=role, tag=tag))
+            elif choice == "3":
+                name = input("Ten thiet bi: ").strip()
+                host = input("IP thiet bi: ").strip()
+                platform = input("Platform (mikrotik/frr): ").strip().lower()
+                port = input("Port [22]: ").strip() or "22"
+                group = input("Group [lab]: ").strip() or "lab"
+                role = input("Role [router]: ").strip() or "router"
+                tags = input("Tags (phan cach boi dau phay): ").strip()
+                credential_ref = input("Credential ref [lab]: ").strip() or "lab"
+                if platform not in {"mikrotik", "frr"}:
+                    print("Platform ho tro: mikrotik hoac frr")
+                    continue
+                added = DeviceInfo(
+                    name=name, host=host, platform=platform, port=int(port),
+                    group=group, role=role,
+                    tags=tuple(t.strip() for t in tags.split(",") if t.strip()),
+                    credential_ref=credential_ref,
+                )
+                manager.add_device(added)
+                if input("Ghi thay doi vao inventory.yaml? [y/N]: ").strip().lower() == "y":
+                    manager.save()
+                    print("Da luu Inventory.")
+                else:
+                    print("Da huy, khong thay doi file.")
+            elif choice == "4":
+                selected = _select_infos(infos, allow_all=False)
+                if not selected:
+                    continue
+                info = selected[0]
+                name = input(f"Ten moi [{info.name}]: ").strip() or info.name
+                host = input(f"IP moi [{info.host}]: ").strip() or info.host
+                port = input(f"Port moi [{info.port}]: ").strip() or str(info.port)
+                group = input(f"Group moi [{info.group}]: ").strip() or info.group
+                role = input(f"Role moi [{info.role}]: ").strip() or info.role
+                platform = input(f"Platform moi [{info.platform}]: ").strip().lower() or info.platform
+                if platform not in {"mikrotik", "frr"}:
+                    print("Platform ho tro: mikrotik hoac frr")
+                    continue
+                manager.update_device(
+                    info.name, name=name, host=host, port=int(port),
+                    group=group, role=role, platform=platform,
+                )
+                if input("Ghi thay doi vao inventory.yaml? [y/N]: ").strip().lower() == "y":
+                    manager.save()
+                    print("Da luu Inventory.")
+                else:
+                    print("Da huy, khong thay doi file.")
+            elif choice == "5":
+                selected = _select_infos(infos, allow_all=False)
+                if not selected:
+                    continue
+                name = selected[0].name
+                if input(f"Xac nhan XOA {name} khoi Inventory? Go 'XOA': ").strip() != "XOA":
+                    print("Da huy.")
+                    continue
+                manager.remove_device(name)
+                manager.save()
+                print("Da xoa khoi file Inventory, khong xoa router GNS3.")
+        except (ValueError, KeyError, OSError) as exc:
+            print(f"[LOI] Inventory: {type(exc).__name__}: {exc}")
+        _pause()
+
+
+def _connection_collection_menu(collect):
+    """TV2/TV3 tren router that; mat khau chi nam tam trong RAM."""
+    from dataclasses import replace
+    from getpass import getpass
+    from devices.ssh_adapter import register_device_adapters
+    from services.connection_manager import ConnectionManager
+    from services.collector import Collector
+
+    try:
+        _, infos = _load_lab_inventory()
+        selected = _select_infos(infos)
+        if not selected:
+            return
+        print("\nCan GNS3 va host key SSH da duoc xac minh.")
+        print("Mat khau nhap rieng cho tung router, khong ghi vao file/Git.")
+        runtime_infos = []
+        previous_env = {}
+        try:
+            for i, info in enumerate(selected, 1):
+                ref = f"TVMENUDEVICE{i}"
+                user_key, pass_key = ref + "_USERNAME", ref + "_PASSWORD"
+                username_default = "admin" if info.platform == "mikrotik" else "backup"
+                username = input(f"Username {info.name} [{username_default}]: ").strip() or username_default
+                password = getpass(f"SSH password {info.name}: ")
+                previous_env[user_key] = os.environ.get(user_key)
+                previous_env[pass_key] = os.environ.get(pass_key)
+                os.environ[user_key] = username
+                os.environ[pass_key] = password
+                runtime_infos.append(replace(info, credential_ref=ref))
+            register_device_adapters(frr_shell="linux")
+            collector = Collector()
+            results = ConnectionManager(max_workers=min(4, len(runtime_infos))).run(
+                runtime_infos,
+                operation=collector.collect if collect else None,
+            )
+            for result in results:
+                data = result.data if isinstance(result.data, dict) else {}
+                print(
+                    f"{result.device}: SSH={data.get('connection_status', '-')}, "
+                    f"collection={data.get('summary', {}).get('status', '-')}, "
+                    f"error={result.error_code or '-'}"
+                )
+                if collect:
+                    for section, detail in data.get("sections", {}).items():
+                        print(f"  {section}: {detail.get('status', '-')}")
+            if collect:
+                dest = PROJECT_DIR / "reports" / "tv2-tv3"
+                dest.mkdir(parents=True, exist_ok=True)
+                print("JSON:", collector.export_json(results, dest / "collection.json"))
+                print("CSV :", collector.export_csv(results, dest / "collection.csv"))
+            complete = all(
+                r.success and (
+                    not collect or r.data.get("summary", {}).get("status") == "success"
+                )
+                for r in results
+            )
+            print(f"Ket qua: {'PASS' if complete else 'PARTIAL/FAIL'}")
+        finally:
+            # Xoa thong tin dang nhap khoi moi truong cua process ke ca khi Ctrl+C.
+            for key, previous in previous_env.items():
+                if previous is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = previous
+    except (ValueError, OSError, KeyError) as exc:
+        print(f"[LOI] {type(exc).__name__}: {exc}")
+
+
+def _tv5_menu():
+    """TV5: dry-run / demo an toan; restore/deploy that can adapter ghi."""
+    import tempfile
+    from core.factory import DeviceFactory
+    from services.backup_manager import BackupManager
+    from cli import main as tv5_cli_main
+
+    while True:
+        print("\n=== TV5 - RESTORE / CONFIG DEPLOY ===")
+        print("1. OSPF dry-run (render template, KHONG SSH)")
+        print("2. Demo deploy tren FakeDevice (KHONG SSH)")
+        print("3. Demo backup -> restore tren FakeDevice (KHONG SSH)")
+        print("4. Thong tin ve Restore/Deploy router that")
+        print("0. Quay lai")
+        choice = _read_choice("Chon: ", set("01234"))
+        if choice == "0":
+            return
+        if choice == "4":
+            print("SSHAdapter TV2 hien chi doc: push_config/restore_config chua duoc ho tro.")
+            print("Chua the demo Restore/Deploy THAT tu menu chung; can TV2 va TV5 tich hop.")
+            _pause()
+            continue
+        try:
+            _, infos = _load_lab_inventory()
+            selected = _select_infos(infos, allow_all=(choice != "3"))
+            if not selected:
+                continue
+            if choice in ("1", "2"):
+                print("Nhap file JSON bien template, hoac Enter dung vi du OSPF an toan.")
+                vars_path = input("Duong dan vars JSON (Enter: vi du): ").strip()
+                with tempfile.TemporaryDirectory(prefix="tv5_menu_") as tmp:
+                    if not vars_path:
+                        vars_file = Path(tmp) / "ospf_vars.json"
+                        vars_file.write_text(json.dumps({
+                            "router_id": "1.1.1.1",
+                            "networks": [{"prefix": "10.0.0.0/24", "area_id": "0.0.0.0"}],
+                        }), encoding="utf-8")
+                        vars_path = str(vars_file)
+                        print("[DEMO] Bien OSPF minh hoa, KHONG dung de deploy router that.")
+                    args = [
+                        "--inventory", str(LAB_INVENTORY), "deploy",
+                        "--template", "ospf", "--vars-file", vars_path,
+                    ]
+                    for info in selected:
+                        args.extend(["--device", info.name])
+                    if choice == "1":
+                        args.append("--dry-run")
+                    else:
+                        args.extend(["--demo", "--backup-dir", str(Path(tmp) / "backups")])
+                    result = tv5_cli_main(args)
+                    print("TV5 return code:", result)
+            elif choice == "3":
+                info = selected[0]
+                with tempfile.TemporaryDirectory(prefix="tv5_restore_demo_") as tmp:
+                    backup_dir = Path(tmp) / "backups"
+                    fake = DeviceFactory.create(info, demo=True)
+                    fake.connect()
+                    try:
+                        saved = BackupManager(str(backup_dir)).backup(fake)
+                    finally:
+                        fake.disconnect()
+                    if not saved.success:
+                        print("[FAIL] Khong tao duoc baseline FakeDevice.")
+                    else:
+                        args = [
+                            "--inventory", str(LAB_INVENTORY), "restore",
+                            "--device", info.name, "--demo",
+                            "--backup-dir", str(backup_dir),
+                        ]
+                        print("[DEMO] Restore snapshot tren FakeDevice; khong dung SSH that.")
+                        result = tv5_cli_main(args)
+                        print("TV5 return code:", result)
+        except (ValueError, KeyError, OSError) as exc:
+            print(f"[LOI] TV5: {type(exc).__name__}: {exc}")
+        _pause()
+
+
+def run_full_menu():
+    """Menu cua ca nhom; TV4 duoc goi truc tiep qua main_TV4.main()."""
+    while True:
+        print("\n" + "=" * 65)
+        print("     NETWORK BACKUP SYSTEM - MENU CHUNG TV1 / TV2 / TV3 / TV4 / TV5")
+        print("=" * 65)
+        print("1. TV1 - Core / Factory / FakeDevice self-test")
+        print("2. TV1 - Menu demo OOP va AuditLogger")
+        print("3. TV2 - Kiem tra ket noi SSH router GNS3")
+        print("4. TV3 - Inventory (xem, loc, them, sua, xoa)")
+        print("5. TV3 - Collector: thu thap qua SSH va xuat JSON/CSV")
+        print("6. TV4 - Backup / Change / Version / Scheduler / Report / Diff")
+        print("7. TV5 - OSPF dry-run / deploy demo / restore demo")
+        print("0. Thoat")
+        choice = _read_choice("Chon chuc nang: ", set("01234567"))
+        if choice == "0":
+            print("Da thoat chuong trinh chung.")
+            return
+        try:
+            if choice == "1":
+                print("[TV1] Ket qua:", "PASS" if run_self_test() else "FAIL")
+            elif choice == "2":
+                run_cli()
+            elif choice == "3":
+                _connection_collection_menu(False)
+            elif choice == "4":
+                _inventory_menu()
+            elif choice == "5":
+                _connection_collection_menu(True)
+            elif choice == "6":
+                # Tich hop nguyen menu TV4 da kiem thu, khong sao chep hoac doi logic.
+                from main_TV4 import main as tv4_main
+                tv4_main()
+            elif choice == "7":
+                _tv5_menu()
+            if choice in {"1", "3", "5"}:
+                _pause()
+        except (KeyboardInterrupt, EOFError):
+            print("\nDa dung thao tac, quay ve menu chung.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, EOFError):
+        print("\nDa thoat chuong trinh.")

@@ -15,23 +15,24 @@ def _scripted_input(monkeypatch, answers):
     return prompts
 
 
-def test_no_arguments_opens_demo_menu_and_exits(monkeypatch, capsys):
+def test_no_arguments_opens_full_menu_and_exits(monkeypatch, capsys):
     _scripted_input(monkeypatch, ["0"])
     main.main([])
     out = capsys.readouterr().out
-    assert "FAKE DEMO" in out
+    assert "MENU CHUNG" in out
     assert "usage:" not in out
 
 
-def test_action_then_other_key_exits(monkeypatch, capsys):
-    prompts = _scripted_input(monkeypatch, ["1", "x"])
-    main.main([])
-    assert len(prompts) == 2
+def test_demo_flag_runs_fake_device_menu(monkeypatch, capsys):
+    prompts = _scripted_input(monkeypatch, ["0"])
+    main.main(["--demo"])
+    assert len(prompts) == 1
     assert "FAKE DEMO" in capsys.readouterr().out
 
 
-def test_action_then_zero_returns_to_menu(monkeypatch, capsys):
-    prompts = _scripted_input(monkeypatch, ["2", "0", "0"])
-    main.main([])
-    assert len(prompts) == 3
-    assert capsys.readouterr().out.count("FAKE DEMO") == 2
+def test_self_test_flag_still_works(capsys):
+    try:
+        main.main(["--self-test"])
+    except SystemExit as exc:
+        assert exc.code == 0
+    assert "PASS" in capsys.readouterr().out
