@@ -1,16 +1,18 @@
 """Read-only NetworkDevice adapter shared by TV2/TV3/TV4/TV5."""
 import re
+from functools import partial
 from typing import List, Optional
 
 from netmiko import ConnectHandler
 from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException, ReadTimeout
-from paramiko import SSHException
 
 from core.base import NetworkDevice
+from core.commands import COLLECTION_COMMANDS
 from core.models import DeviceInfo
 from core.settings import credentials_from_env
 from core.exceptions import (DeviceAuthenticationError, DeviceConnectionError,
-                             DeviceTimeoutError, DeviceCommandError)
+                             DeviceTimeoutError, DeviceCommandError,
+                             UnsupportedFeatureError)
 
 
 class SSHAdapter(NetworkDevice):
@@ -83,7 +85,7 @@ class SSHAdapter(NetworkDevice):
             except Exception:
                 raise DeviceConnectionError("SSH disconnect failed") from None
 
-    def _read(self, command: str) -> str:
+    def _read(self, command: str, allow_empty: bool = False) -> str:
         if self._connection is None:
             raise DeviceConnectionError("Device is not connected")
         try:
@@ -95,7 +97,7 @@ class SSHAdapter(NetworkDevice):
         except Exception:
             self._close_on_error()
             raise DeviceCommandError("Cannot read device output") from None
-        if not isinstance(output, str) or not output.strip():
+        if not isinstance(output, str) or (not allow_empty and not output.strip()):
             self._close_on_error()
             raise DeviceCommandError("Device returned empty output")
         return output.replace("\r\n", "\n").replace("\r", "\n")
@@ -105,7 +107,7 @@ class SSHAdapter(NetworkDevice):
             return self._read(command)
         output = self._read('vtysh -c "' + command + '"')
         # vtysh's own error, not bash's command-not-found, identifies a CLI login.
-        if self.frr_shell == "auto" and re.search(r"(?mi)^%\s*Unknown command", output):
+        if self.frr_shell == "auto" and re.search(r"(?mi)^%\s*Unknown command:\s*vtysh\b", output):
             return self._read(command)
         return output
 
@@ -115,13 +117,25 @@ class SSHAdapter(NetworkDevice):
             r"(?mi)^\s*(?:%\s*(?:Unknown|Error|Can't)|(?:failure|error|syntax error|bad command name)\b|.*(?:command not found|permission denied|vtysh: not found))", output))
 
     def send_command(self, command: str) -> str:
-        allowed = ({"/export terse", "/system resource print"} if self.info.platform == "mikrotik"
-                   else {"show running-config", "show version"})
+        profile = COLLECTION_COMMANDS[self.info.platform]
+        collection_commands = {value for value in profile.values() if value is not None}
+        config_command = "/export terse" if self.info.platform == "mikrotik" else "show running-config"
+        allowed = collection_commands | {config_command}
         if command not in allowed:
             raise DeviceCommandError("Read-only adapter: command is not supported")
-        output = self._read(command) if self.info.platform == "mikrotik" else self._frr(command)
+        if self.info.platform == "mikrotik":
+            # An empty RouterOS table is a valid collection result.
+            output = self._read(command, allow_empty=command.endswith("terse without-paging"))
+        else:
+            output = self._frr(command)
+        if command in collection_commands and re.search(
+            r"(?mi)^\s*(?:%\s*Unknown command|bad command name)\b", output
+        ):
+            raise UnsupportedFeatureError("Device does not support this collection command")
         if self._has_error(output):
-            self._close_on_error()
+            # Collector records command errors per section and reads the next one.
+            if command == config_command:
+                self._close_on_error()
             raise DeviceCommandError("Device rejected the read-only command")
         return output
 
@@ -161,10 +175,14 @@ class SSHAdapter(NetworkDevice):
         self.disconnect()
 
 
-def register_device_adapters() -> None:
+def register_device_adapters(*, timeout: float = 30,
+                             known_hosts: Optional[str] = None,
+                             frr_shell: str = "auto") -> None:
     """Register builders; credentials are resolved at connect(), per TV1 contract."""
     from core.factory import DeviceFactory
     from devices.mikrotik import MikroTikDevice
     from devices.frr import FRRDevice
-    DeviceFactory.register("mikrotik", MikroTikDevice)
-    DeviceFactory.register("frr", FRRDevice)
+    DeviceFactory.register("mikrotik", partial(
+        MikroTikDevice, timeout=timeout, known_hosts=known_hosts))
+    DeviceFactory.register("frr", partial(
+        FRRDevice, timeout=timeout, known_hosts=known_hosts, frr_shell=frr_shell))

@@ -1,4 +1,5 @@
 from core.base import NetworkDevice
+from core.commands import COLLECTION_COMMANDS
 from core.models import TaskResult
 
 from core.exceptions import UnsupportedFeatureError
@@ -28,28 +29,7 @@ class Collector:
     )
 
 
-    COMMANDS = {
-        "mikrotik": {
-            "system": "/system resource print",
-            "serial": "/system routerboard print",
-            "interfaces": "/interface print terse without-paging",
-            "routes": "/ip route print terse without-paging",
-            "arp": "/ip arp print terse without-paging",
-            "mac_table": "/interface bridge host print terse without-paging",
-            "discovery": "/ip neighbor print terse without-paging",
-            "ospf": "/routing ospf neighbor print terse without-paging",
-        },
-        "frr": {
-            "system": "show version",
-            "serial": None,
-            "interfaces": "show interface json",
-            "routes": "show ip route json",
-            "arp": None,
-            "mac_table": None,
-            "discovery": None,
-            "ospf": "show ip ospf neighbor json",
-        },
-    }
+    COMMANDS = COLLECTION_COMMANDS
 
 
     @staticmethod
