@@ -45,21 +45,8 @@ def run_self_test(logger=None) -> bool:
     return True
 
 
-def run_cli() -> None:
-    """CLI cho phan loi; menu day du se goi cac service cua TV3-TV5."""
-    devices = make_demo_devices()
-    audit = AuditLogger()
-    operator = os.getenv("APP_OPERATOR", "local_demo")
-    print("\n=== NETWORK BACKUP SYSTEM [FAKE DEMO] ===")
-    print("1. Danh sach thiet bi mau")
-    print("2. Ket noi va doc cau hinh FakeDevice")
-    print("3. Thu thay doi va khoi phuc gia lap")
-    print("4. Huong dan chay Inventory va SSH")
-    print("0. Thoat")
-    choice = input("Nhap lua chon: ").strip()
-    if choice == "0":
-        print("Tam biet!")
-        return
+def _run_demo_action(choice: str, devices, audit, operator: str) -> None:
+    """Chay mot lua chon cua menu FakeDevice."""
     if choice == "1":
         for d in devices.values():
             print(f"  {d.info.name}: {d.info.platform} - {d.info.host} (IP gia)")
@@ -89,6 +76,29 @@ def run_cli() -> None:
         print("Thu thap SSH: python main.py --collect --inventory <file YAML/JSON>")
     else:
         print("Lua chon khong hop le")
+
+
+def run_cli() -> None:
+    """Menu FakeDevice: moi lua chon chay mot lan; nhap 0 sau khi chay de ve menu chinh."""
+    devices = make_demo_devices()
+    audit = AuditLogger()
+    operator = os.getenv("APP_OPERATOR", "local_demo")
+    while True:
+        print("\n=== NETWORK BACKUP SYSTEM [FAKE DEMO] ===")
+        print("1. Danh sach thiet bi mau")
+        print("2. Ket noi va doc cau hinh FakeDevice")
+        print("3. Thu thay doi va khoi phuc gia lap")
+        print("4. Huong dan chay Inventory va SSH")
+        print("0. Thoat")
+        choice = input("Nhap lua chon: ").strip()
+        if choice == "0":
+            print("Tam biet!")
+            return
+        _run_demo_action(choice, devices, audit, operator)
+        back = input("Nhan 0 de ve menu chinh (phim khac de thoat): ").strip()
+        if back != "0":
+            print("Tam biet!")
+            return
 
 
 def run_inventory(args) -> int:
