@@ -1,7 +1,6 @@
-"""Offline tests. Optional cross-branch worktrees contain unmodified services."""
+"""Offline adapter and service tests against the integrated checkout."""
 import hashlib
 import json
-import os
 from pathlib import Path
 import sys
 import tempfile
@@ -97,10 +96,6 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(DeviceConnectionError): self.device().get_running_config()
 
     def test_tv4_services(self):
-        root = os.environ.get('TV2_TV4_ROOT')
-        if not root: self.skipTest('Set TV2_TV4_ROOT to TV4 checkout')
-        import services
-        services.__path__.insert(0,str(Path(root)/'services'))
         from services.backup_manager import BackupManager
         from services.change_detector import ChangeDetector
         from services.backup_scheduler import BackupScheduler
@@ -119,10 +114,6 @@ class AdapterTests(unittest.TestCase):
                 self.assertTrue(BackupScheduler(manager).run_once([self.device(platform)])[0].success)
 
     def test_tv3_services(self):
-        root = os.environ.get('TV2_TV3_ROOT')
-        if not root: self.skipTest('Set TV2_TV3_ROOT to TV3 checkout')
-        import services
-        services.__path__.insert(0,str(Path(root)/'services'))
         from services.connection_manager import ConnectionManager
         register_device_adapters()
         with patch('devices.ssh_adapter.credentials_from_env',return_value=Mock(username='backup',password='private-value')):
