@@ -35,15 +35,15 @@ def test_restore_and_config_modules_import_without_errors():
 def test_inventory_list_shows_all_devices(capsys):
     assert cli.main(["--inventory", INVENTORY, "inventory", "list"]) == 0
     out = capsys.readouterr().out
-    for name in ("R1", "R2", "R3", "R4"):
+    for name in ("MikroTik-R1", "R2", "FRR-R3", "R4"):
         assert name in out
 
 
 def test_inventory_list_filters_by_group(capsys):
     assert cli.main(["--inventory", INVENTORY, "inventory", "list", "--group", "nhom-b"]) == 0
     out = capsys.readouterr().out
-    assert "R3" in out and "R4" in out
-    assert "R1" not in out and "R2" not in out
+    assert "FRR-R3" in out and "R4" in out
+    assert "MikroTik-R1" not in out and "R2" not in out
 
 
 def test_unknown_device_returns_error_code(capsys):
@@ -54,7 +54,7 @@ def test_unknown_device_returns_error_code(capsys):
 def test_deploy_dry_run_renders_both_platforms(ospf_vars, capsys):
     rc = cli.main([
         "--inventory", INVENTORY, "deploy", "--template", "ospf",
-        "--device", "R1", "--device", "R3",
+        "--device", "MikroTik-R1", "--device", "FRR-R3",
         "--vars-file", ospf_vars, "--dry-run",
     ])
     assert rc == 0
@@ -66,7 +66,7 @@ def test_deploy_dry_run_renders_both_platforms(ospf_vars, capsys):
 def test_deploy_demo_pushes_config(ospf_vars, tmp_path, capsys):
     rc = cli.main([
         "--inventory", INVENTORY, "deploy", "--template", "ospf",
-        "--device", "R1", "--vars-file", ospf_vars, "--demo",
+        "--device", "MikroTik-R1", "--vars-file", ospf_vars, "--demo",
         "--backup-dir", str(tmp_path / "backups"),
     ])
     assert rc == 0
@@ -75,7 +75,7 @@ def test_deploy_demo_pushes_config(ospf_vars, tmp_path, capsys):
 
 def test_restore_without_snapshot_fails(tmp_path, capsys):
     rc = cli.main([
-        "--inventory", INVENTORY, "restore", "--demo", "--device", "R1",
+        "--inventory", INVENTORY, "restore", "--demo", "--device", "MikroTik-R1",
         "--backup-dir", str(tmp_path / "empty"),
     ])
     assert rc == 1
@@ -84,12 +84,12 @@ def test_restore_without_snapshot_fails(tmp_path, capsys):
 
 def test_backup_then_restore_roundtrip_demo(tmp_path, capsys):
     backup_dir = tmp_path / "backups"
-    device = FakeDevice(DeviceInfo(name="R1", host="192.0.2.11", platform="mikrotik"))
+    device = FakeDevice(DeviceInfo(name="MikroTik-R1", host="192.0.2.11", platform="mikrotik"))
     device.connect()
     assert BackupManager(backup_dir=str(backup_dir)).backup(device).success
 
     rc = cli.main([
-        "--inventory", INVENTORY, "restore", "--demo", "--device", "R1",
+        "--inventory", INVENTORY, "restore", "--demo", "--device", "MikroTik-R1",
         "--backup-dir", str(backup_dir),
     ])
     assert rc == 0
