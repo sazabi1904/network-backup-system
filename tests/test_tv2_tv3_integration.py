@@ -99,7 +99,7 @@ def test_cli_collects_both_platforms_and_exports(tmp_path, ssh_lab, shell, direc
         main(["--collect", "--inventory", str(inventory), "--output-dir", str(output),
               "--timeout", "9", "--known-hosts", "verified_hosts", "--frr-shell", shell])
     assert result.value.code == 0
-    records = json.loads((output / "collection.json").read_text())
+    records = json.loads((output / "collection.json").read_text(encoding="utf-8"))
     assert [record["device"] for record in records] == ["MT-R1", "FRR-R3"]
     mt, frr = records
     assert mt["sections"]["interfaces"]["data"][0]["name"] == "ether1"
@@ -167,7 +167,7 @@ def test_read_timeout_closes_session_and_cli_reports_partial_error(tmp_path, ssh
     with pytest.raises(SystemExit) as result:
         main(["--collect", "--inventory", str(inventory)])
     assert result.value.code == 1
-    records = json.loads((tmp_path / "reports/tv2-tv3/collection.json").read_text())
+    records = json.loads((tmp_path / "reports/tv2-tv3/collection.json").read_text(encoding="utf-8"))
     assert records[0]["sections"]["routes"]["error_code"] == "DeviceTimeoutError"
     assert records[1]["sections"]["routes"]["status"] == "success"
     for session in ssh_lab["sessions"].values():
