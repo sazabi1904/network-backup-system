@@ -1,5 +1,7 @@
 # TV2 — Báo cáo nhiệm vụ tuần 1
 
+Phần tích hợp cập nhật ngày 16/11/2026 có tại [Ghép TV2 và TV3](GHEP_TV2_TV3.md), gồm danh sách thay đổi, cách chạy CLI và phạm vi kiểm thử.
+
 **Đề tài:** Hệ thống sao lưu và khôi phục cấu hình thiết bị mạng tập trung.
 **Thực hiện lab:** 31/10/2026. **Tổng hợp báo cáo:** 01/11/2026.
 **Môi trường thực tế:** Mac Apple M1, RAM 8 GB.
