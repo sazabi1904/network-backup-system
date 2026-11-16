@@ -50,46 +50,45 @@ def run_cli() -> None:
     devices = make_demo_devices()
     audit = AuditLogger()
     operator = os.getenv("APP_OPERATOR", "local_demo")
-    while True:
-        print("\n=== NETWORK BACKUP SYSTEM [FAKE DEMO] ===")
-        print("1. Danh sach thiet bi mau")
-        print("2. Ket noi va doc cau hinh FakeDevice")
-        print("3. Thu thay doi va khoi phuc gia lap")
-        print("4. Huong dan chay Inventory va SSH")
-        print("0. Thoat")
-        choice = input("Nhap lua chon: ").strip()
-        if choice == "0":
-            print("Tam biet!")
-            break
-        if choice == "1":
-            for d in devices.values():
-                print(f"  {d.info.name}: {d.info.platform} - {d.info.host} (IP gia)")
-        elif choice in ("2", "3"):
-            device = devices["R1"]
-            try:
-                device.connect()
-                before = device.get_running_config()
-                print("Before:", repr(before))
-                if choice == "3":
-                    cmds = ["! simulated-demo-change"]
-                    device.push_config(cmds)
-                    print("After:", repr(device.get_running_config()))
-                    restored = device.restore_config(before)
-                    print("Restored (FAKE):", restored)
-                    audit.log(operator, "R1", "fake_restore", restored, cmds)
-                else:
-                    audit.log(operator, "R1", "fake_get_config", True)
-            except Exception as exc:
-                # Chi log ma loi, khong ghi exception message co the lo secrets
-                audit.log(operator, "R1", "fake_demo", False,
-                          error_code=type(exc).__name__)
-                print("Loi:", type(exc).__name__)
-            finally:
-                device.disconnect()
-        elif choice == "4":
-            print("Thu thap SSH: python main.py --collect --inventory <file YAML/JSON>")
-        else:
-            print("Lua chon khong hop le")
+    print("\n=== NETWORK BACKUP SYSTEM [FAKE DEMO] ===")
+    print("1. Danh sach thiet bi mau")
+    print("2. Ket noi va doc cau hinh FakeDevice")
+    print("3. Thu thay doi va khoi phuc gia lap")
+    print("4. Huong dan chay Inventory va SSH")
+    print("0. Thoat")
+    choice = input("Nhap lua chon: ").strip()
+    if choice == "0":
+        print("Tam biet!")
+        return
+    if choice == "1":
+        for d in devices.values():
+            print(f"  {d.info.name}: {d.info.platform} - {d.info.host} (IP gia)")
+    elif choice in ("2", "3"):
+        device = devices["R1"]
+        try:
+            device.connect()
+            before = device.get_running_config()
+            print("Before:", repr(before))
+            if choice == "3":
+                cmds = ["! simulated-demo-change"]
+                device.push_config(cmds)
+                print("After:", repr(device.get_running_config()))
+                restored = device.restore_config(before)
+                print("Restored (FAKE):", restored)
+                audit.log(operator, "R1", "fake_restore", restored, cmds)
+            else:
+                audit.log(operator, "R1", "fake_get_config", True)
+        except Exception as exc:
+            # Chi log ma loi, khong ghi exception message co the lo secrets
+            audit.log(operator, "R1", "fake_demo", False,
+                      error_code=type(exc).__name__)
+            print("Loi:", type(exc).__name__)
+        finally:
+            device.disconnect()
+    elif choice == "4":
+        print("Thu thap SSH: python main.py --collect --inventory <file YAML/JSON>")
+    else:
+        print("Lua chon khong hop le")
 
 
 def run_inventory(args) -> int:
