@@ -170,10 +170,8 @@ def main(argv=None) -> None:
         parser.error("--inventory can --check-connections hoac --collect")
     if args.self_test:
         raise SystemExit(0 if run_self_test() else 1)
-    if args.demo:
-        run_cli()
-    else:
-        parser.print_help()
+    # Khong chon che do nao: mo menu FakeDevice (khong SSH, an toan).
+    run_cli()
 
 
 if __name__ == "__main__":
