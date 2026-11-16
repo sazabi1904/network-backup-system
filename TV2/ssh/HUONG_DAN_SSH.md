@@ -39,7 +39,7 @@ with SSHAdapter(info=info, host=info.host,
 ```
 Đổi info sang `DeviceInfo("FRR-1", "192.168.10.25", "frr")` để dùng FRR. Caller chịu trách nhiệm connect/disconnect khi gọi BackupManager trực tiếp; context manager đảm bảo đóng phiên. BackupScheduler của TV4 tự connect/disconnect, vì vậy truyền danh sách adapter chưa kết nối vào `scheduler.run_once(devices)`.
 
-Không sửa các lớp trong services/. Code TV4 nằm ở nhánh `feature/tv4-backup`, TV3 ở `feature/tv3-inventory`; ví dụ import service chỉ chạy khi code nhánh tương ứng đã có trong checkout tích hợp.
+Code TV2, TV3 và TV4 đã được merge vào `main` ngày 11/11/2026. Hướng dẫn luồng Inventory → SSH → Collector có trong [Ghép TV2 và TV3](../GHEP_TV2_TV3.md).
 
 ## Dùng qua Factory và ConnectionManager của TV3
 ```python
@@ -63,6 +63,8 @@ get_running_config trả str giữ nội dung thiết bị, chuẩn hóa CRLF v�
 
 Ngoại lệ dùng chung: DeviceAuthenticationError, DeviceConnectionError, DeviceTimeoutError, DeviceCommandError. Thông báo không chứa raw exception/output/password. Lỗi kết nối/đọc/validate đóng phiên; disconnect gọi lặp an toàn. send_command chỉ cho phép các lệnh đọc trong bảng.
 
+Bản ghép TV2-TV3 bổ sung các lệnh thu thập trong `core/commands.py`. Bảng RouterOS rỗng được chấp nhận. Lỗi lệnh thu thập được ghi riêng từng mục và giữ phiên để đọc tiếp. Lệnh thiết bị không hỗ trợ tạo `UnsupportedFeatureError`. Timeout hoặc lỗi truyền dữ liệu đóng phiên. Có thể gọi `register_device_adapters(timeout=15, known_hosts="/path/to/known_hosts", frr_shell="linux")` để cấu hình các adapter tạo qua Factory.
+
 ## CLI probe và lấy cấu hình
 ```bash
 .venv/bin/python TV2/ssh/ssh_client.py --platform mikrotik --name MT-R1 --host 192.168.10.21 --username backup
@@ -83,16 +85,13 @@ Chạy unit test:
 ```bash
 .venv/bin/python -m unittest discover -s TV2/ssh -p 'test_*.py' -v
 ```
-Hai test service sẽ skip nếu không có checkout nhánh khác. Để chạy đủ:
+Các test service hiện dùng trực tiếp mã TV3/TV4 trong repository đã ghép. Chạy toàn bộ test của nhóm bằng lệnh sau.
 ```bash
-git fetch origin
-git worktree add --detach ../tv4-check origin/feature/tv4-backup
-git worktree add --detach ../tv3-check origin/feature/tv3-inventory
-TV2_TV4_ROOT="$PWD/../tv4-check" TV2_TV3_ROOT="$PWD/../tv3-check" .venv/bin/python -m unittest discover -s TV2/ssh -p 'test_*.py' -v
+.venv/bin/python -m pytest -q
 ```
-PowerShell: đặt hai biến bằng $env:TV2_TV4_ROOT và $env:TV2_TV3_ROOT thành đường dẫn tuyệt đối, rồi chạy lệnh unittest bằng Python trong .venv.
+PowerShell dùng `.venv\Scripts\python.exe -m pytest -q`.
 
 ## Chưa nghiệm thu trên router thật
 Kiểm tra TCP từ máy thực hiện tới 192.168.10.21:22 chưa thành công. Chưa có kết quả Netmiko thực tế T1–T4 trên MT-R1/MT-R2/FRR-1, backup thực tế T5 hoặc thay đổi cấu hình thật T6. changed=True trong test dùng fixture thay đổi, không gửi lệnh thay đổi router. Cần chạy CLI và ví dụ BackupManager trên máy truy cập được lab với tài khoản/known_hosts hợp lệ; không coi test mock là nghiệm thu SSH thật.
 
-Nguồn API: https://github.com/ktbyers/netmiko . Interface tích hợp: docs/API_CONTRACTS.md của TV1; không có chỉnh sửa các file services/ trong thay đổi này.
+Nguồn API: https://github.com/ktbyers/netmiko . Interface tích hợp được mô tả trong `docs/API_CONTRACTS.md` của TV1.

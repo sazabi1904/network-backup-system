@@ -112,7 +112,7 @@ Các chức năng đã được kiểm thử bằng `FakeDevice` và adapter mô
 
 Các test hồi quy kiểm tra IP sai khi đọc/thêm/sửa, lưu và đọc lại IPv4/IPv6, lỗi tạo/ghi log và che dữ liệu nhạy cảm khi xuất JSON/CSV mà không sửa dữ liệu gốc.
 
-`main.py` chưa tích hợp service TV3. Timeout kết nối và lệnh cần được cấu hình tại adapter TV2 trước khi kiểm thử router thật.
+`main.py` đã tích hợp Inventory, ConnectionManager và Collector với adapter TV2 qua `--check-connections` và `--collect`. Có thể cấu hình timeout, known_hosts, chế độ FRR và số kết nối đồng thời trên CLI. Các lệnh thu thập dùng chung bảng trong `core/commands.py`. Xem [thay đổi và cách chạy TV2-TV3](../TV2/GHEP_TV2_TV3.md).
 
 Việc kiểm thử SSH trực tiếp trên GNS3 vẫn phụ thuộc vào:
 
