@@ -1,4 +1,3 @@
-
 import os
 import logging
 from typing import Dict, List, Sequence, Any, Optional
@@ -9,9 +8,9 @@ from core.base import NetworkDevice
 from core.models import TaskResult, ConfigSnapshot
 from services.restore import RestoreManager
 from services.verification import VerificationService
+from core.exceptions import DeviceCommandError
 
 logger = logging.getLogger(__name__)
-
 
 class ConfigManager:
     """

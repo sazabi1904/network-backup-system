@@ -1,11 +1,11 @@
 # Network Backup System — Project khung TV1
 
-> **Chi la project khung + demo FakeDevice.** Chua ket noi GNS3, chua co Inventory CRUD, BackupScheduler, RestoreManager hay Cấu hình hàng loạt that. Cac module do do TV2-TV5 phat trien.
+> **Da ghep adapter SSH TV2 voi service TV3 qua main.py.** CLI doc Inventory, kiem tra ket noi, thu thap MikroTik/FRR va xuat JSON/CSV. Luong tich hop duoc kiem thu voi transport SSH mo phong. Nghiem thu SSH tren router GNS3 van can thuc hien trong lab.
 
 ## Yeu cau
 
 - Windows 11, VS Code, Git
-- Python 3.9 tro len (khuyen nghi 3.11)
+- Python 3.10 tro len (khuyen nghi 3.11)
 
 ## Chay tren Windows (PowerShell)
 
@@ -23,11 +23,24 @@ Neu muon dung `python` thay vi duong dan `.venv\Scripts\python.exe`, kich hoat P
 
 - TV1: core/*, main.py, services/logger.py; on dinh API, logging, security, tich hop
 - TV2: devices/mikrotik.py, devices/frr.py + GNS3; dang ky adapter voi Factory
-- TV3: services/inventory.py, connection.py, collector.py
+- TV3: services/inventory.py, services/connection_manager.py, services/collector.py
 - TV4: services/backup.py, version_manager.py, config_diff.py, scheduler
 - TV5: services/restore.py, config_manager.py, verification.py, templates/
 
 Xem `docs/API_CONTRACTS.md` va `docs/HUONG_DAN_TV1.md`.
+
+Chi tiet chuc nang va kiem thu TV3: [TV3/README.md](TV3/README.md).
+
+## Chay luong TV2 va TV3
+
+Chuan bi Inventory voi IP router, thong tin dang nhap trong moi truong va host key da xac minh theo [huong dan ghep TV2-TV3](TV2/GHEP_TV2_TV3.md).
+
+```powershell
+.\.venv\Scripts\python.exe main.py --check-connections --inventory data/inventory.yaml
+.\.venv\Scripts\python.exe main.py --collect --inventory data/inventory.yaml --output-dir reports/tv2-tv3
+```
+
+File `data/inventory.yaml` chua IP minh hoa. Cap nhat ban Inventory cuc bo truoc khi chay SSH. Dung `--group`, `--role`, `--tag` de loc thiet bi, `--workers` va `--timeout` de dieu chinh ket noi.
 
 ## Luu y
 
