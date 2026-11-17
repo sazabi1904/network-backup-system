@@ -1,11 +1,9 @@
 import logging
 import hashlib
 from typing import Optional
-
 from core.base import NetworkDevice
 from core.models import ConfigSnapshot, TaskResult
 from services.verification import VerificationService
-from core.exceptions import DeviceRestoreError
 
 logger = logging.getLogger(__name__)
 
