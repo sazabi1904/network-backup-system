@@ -1,13 +1,13 @@
 """TV5 - verify device configuration after deploy or restore.
 
-Verification here is intentionally conservative about conflicting identity
-settings. A subset-of-lines result is NOT proof of a full device restore;
-RestoreManager performs an additional exact read-back comparison.
+Deploy verifies its supported scope; restore compares the complete canonical
+snapshot without discarding ordering, indentation or extra configuration.
 """
 
 import hashlib
 import logging
 import re
+import time
 from collections import Counter
 from typing import Any, Dict, List
 
@@ -49,11 +49,7 @@ class VerificationService:
         return []
 
     def verify_config_match(self, device: NetworkDevice, expected_config: str) -> Dict[str, Any]:
-        """Verify expected lines while rejecting conflicting hostname values.
-
-        This method is a presence check for *deploy*. Full restore must also
-        verify exact canonical configuration (done by RestoreManager).
-        """
+        """Require exact canonical state and reject conflicting hostname values."""
         name = device.info.name
         try:
             running = device.get_running_config()
@@ -76,13 +72,22 @@ class VerificationService:
                 or unique_actual != set(expected_hostnames)
             )
 
-            exact = self.compute_hash(expected_config) == self.compute_hash(running)
-            passed = not missing and not conflicting_hostname and not wrong_hostname
+            normalize = getattr(device, 'normalize_config_for_verification', lambda value: value)
+            expected_canonical = self._canonical(normalize(expected_config))
+            actual_canonical = self._canonical(normalize(running))
+            exact = expected_canonical == actual_canonical
+            passed = exact and not conflicting_hostname and not wrong_hostname
+            unexpected = list((actual_counts - expected_counts).elements())
+            real_adapter = hasattr(device, 'write_scopes')
             return {
                 "device_name": name,
                 "passed": passed,
                 "exact_hash_match": exact,
-                "missing_lines": missing,
+                "missing_lines": (['<configuration omitted>'] if missing else []) if real_adapter else missing,
+                "unexpected_lines": (['<configuration omitted>'] if unexpected else []) if real_adapter else unexpected,
+                "missing_line_count":len(missing),
+                "unexpected_line_count":len(unexpected),
+                "verification_mode": "exact-configuration",
                 "conflicting_hostname": conflicting_hostname,
                 "wrong_hostname": wrong_hostname,
                 "actual_hostnames": actual_hostnames,
@@ -90,3 +95,67 @@ class VerificationService:
         except Exception as exc:
             logger.error("[Verification] Error reading %s: %s", name, exc)
             return {"device_name": name, "passed": False, "error": str(exc)}
+
+    @staticmethod
+    def _canonical(content):
+        # Keep indentation, ordering, duplicates and block context.
+        return '\n'.join(line.rstrip() for line in content.splitlines() if line.strip())
+
+    def verify_commands_present(self, device, commands):
+        """Deploy checks scope; restore uses exact configuration comparison."""
+        try:
+            checker = getattr(device, 'verify_config_commands', None)
+            if callable(checker):
+                result = checker(commands)
+                if not isinstance(result, dict) or type(result.get('passed')) is not bool:
+                    raise ValueError('Invalid adapter verification result')
+                return result
+            expected = Counter(self._lines('\n'.join(commands)))
+            actual = Counter(self._lines(device.get_running_config()))
+            missing = list((expected - actual).elements())
+            return {'device_name':device.info.name, 'passed':bool(commands) and not missing,
+                    'missing_lines':missing, 'verification_mode':'literal-command-lines'}
+        except Exception as exc:
+            return {'device_name':device.info.name, 'passed':False, 'error':type(exc).__name__}
+
+    def verify_ospf_convergence(self, device, expected_neighbors, expected_routes=(), timeout=90):
+        """Broadcast DROthers may be 2-Way; require at least one FULL adjacency.
+
+        Every expected peer must be FULL/2-Way, and requested routes must be
+        selected OSPF routes. A config read-back alone never passes this check.
+        """
+        from devices.ospf_adapter import ipv4, prefix
+        expected = {ipv4(rid) for rid in expected_neighbors}
+        routes = {prefix(net) for net in expected_routes}
+        if not expected or not 0 < timeout <= 600:
+            raise ValueError('Expected peers and timeout in (0, 600] are required')
+        deadline = time.monotonic() + timeout
+        while True:
+            neighbors = device.ospf_neighbors()
+            states = {rid: [state.lower().replace('-', '') for state in neighbors.get(rid, [])]
+                      for rid in expected}
+            ready = all(any(state.startswith(('full', '2way')) for state in values)
+                        for values in states.values())
+            full = any(state.startswith('full') for values in states.values() for state in values)
+            actual_routes = set(device.ospf_routes()) if routes else set()
+            passed = ready and full and routes <= actual_routes
+            result = {'device_name': device.info.name, 'passed': passed,
+                      'verification_mode': 'ospf-convergence', 'neighbors': neighbors,
+                      'expected_neighbors': sorted(expected), 'expected_routes': sorted(routes),
+                      'missing_routes': sorted(routes - actual_routes)}
+            if passed or time.monotonic() >= deadline:
+                return result
+            time.sleep(min(1, max(0, deadline - time.monotonic())))
+
+
+class OSPFVerificationService(VerificationService):
+    """Optional deploy policy: rollback when expected OSPF peers do not converge."""
+    def __init__(self, expected_neighbors, timeout=90):
+        self.expected_neighbors = expected_neighbors
+        self.timeout = timeout
+
+    def verify_commands_present(self, device, commands):
+        configured = super().verify_commands_present(device, commands)
+        if not configured.get('passed'):
+            return configured
+        return self.verify_ospf_convergence(device, self.expected_neighbors, timeout=self.timeout)

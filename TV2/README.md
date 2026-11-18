@@ -28,3 +28,15 @@ Phần tích hợp cập nhật ngày 16/11/2026 có tại [Ghép TV2 và TV3](G
 Hồ sơ gồm tài liệu, lệnh cấu hình đã dùng, minh chứng đã rà soát và nguồn tải image. Project GNS3 cùng đĩa thiết bị đã cấu hình vẫn nằm trên máy thực hiện. Không có image, đĩa VM chứa tài khoản, mật khẩu, file `.env`, backup thiết bị hoặc log vận hành nguyên bản trong thư mục này. Các thành viên có thể dựng lại theo tài liệu và tự thiết lập tài khoản lab.
 
 Phần lập trình tiếp theo cần tuân theo [API contracts của TV1](../docs/API_CONTRACTS.md); hồ sơ này không thay đổi interface của project.
+
+## Ghi cấu hình và restore (17/11/2026)
+
+Xem [hướng dẫn adapter ghi, CLI và bằng chứng kiểm thử](GHI_VA_RESTORE.md). Phạm vi: identity MikroTik và description interface FRR; adapter đọc mặc định giữ nguyên.
+
+## Bản ghép mới ngày 18/11/2026
+
+Xem [đối chiếu đầu việc TV2 TV5, cách chạy và kết quả mới](DOI_CHIEU_TV2_TV5_20261118.md).
+
+## OSPF TV2–TV5
+
+Xem [scope OSPFv2 backbone, CLI/menu và nghiệm thu SSH thật](OSPF_TV2_TV5.md). Tài liệu tuần 1 ở trên là lịch sử lab.

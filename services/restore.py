@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 class RestoreManager:
     """Triển khai RestoreService (TV5): Quản lý khôi phục và Rollback cấu hình từ ConfigSnapshot."""
 
-    def __init__(self, verifier: Optional[VerificationService] = None):
+    def __init__(self, verifier: Optional[VerificationService] = None, backup_manager=None):
         self.verifier = verifier or VerificationService()
+        self.backup_manager = backup_manager
 
     def validate_snapshot(self, device: NetworkDevice, snapshot: ConfigSnapshot) -> bool:
         """Kiểm tra đúng thiết bị, nền tảng, phạm vi và hash của bản backup."""
@@ -45,6 +46,14 @@ class RestoreManager:
         return True
 
     def restore(self, device: NetworkDevice, snapshot: ConfigSnapshot) -> TaskResult:
+        from core.operation_lock import device_operation
+        try:
+            with device_operation(device):
+                return self._restore(device, snapshot)
+        except RuntimeError as exc:
+            return TaskResult(device.info.name, 'restore', False, str(exc), error_code='DEVICE_BUSY')
+
+    def _restore(self, device: NetworkDevice, snapshot: ConfigSnapshot) -> TaskResult:
         """Thực hiện khôi phục cấu hình cho thiết bị từ ConfigSnapshot của TV4."""
         device_name = device.info.name
         snapshot_id = getattr(snapshot, "snapshot_id", "<invalid>")
@@ -62,6 +71,20 @@ class RestoreManager:
             )
 
         try:
+            recovery_id = None
+            if getattr(device, 'write_scopes', None) == ():
+                raise RuntimeError('Adapter is read-only; enable an explicit write scope')
+            if getattr(device, 'write_scopes', None):
+                from services.backup_manager import BackupManager
+                manager = self.backup_manager or BackupManager()
+                device.connect()  # Idempotent; recover a transport closed by a read timeout.
+                saved = manager.backup(device)
+                if not saved.success:
+                    raise RuntimeError('Pre-restore backup failed; no restore was sent')
+                recovery_id = saved.data.get('snapshot_id')
+                candidates = [s for s in manager.list_snapshots(device_name) if s.snapshot_id == recovery_id]
+                if len(candidates) != 1 or not self.validate_snapshot(device, candidates[0]):
+                    raise RuntimeError('Invalid pre-restore backup; no restore was sent')
             # 2. Gọi phương thức restore_config() của NetworkDevice (do TV2 adapter cung cấp)
             restore_success = device.restore_config(snapshot.content)
             if restore_success is not True:
@@ -69,6 +92,9 @@ class RestoreManager:
 
             # 3. Kiểm chứng lại trạng thái cấu hình sau khôi phục
             verify_res = self.verifier.verify_config_match(device, snapshot.content)
+            if verify_res.get('passed') and type(self.verifier) is not VerificationService:
+                # An injected permissive verifier cannot downgrade restore to a subset check.
+                verify_res = VerificationService().verify_config_match(device, snapshot.content)
             if not verify_res.get("passed"):
                 return TaskResult(
                     device=device_name, action="restore", success=False,
@@ -82,7 +108,7 @@ class RestoreManager:
                 action="restore",
                 success=True,
                 message="Khôi phục cấu hình thành công",
-                data={"snapshot_id": snapshot_id, **verify_res}
+                data={"snapshot_id": snapshot_id, "recovery_snapshot_id":recovery_id, **verify_res}
             )
 
         except Exception as e:
@@ -93,5 +119,7 @@ class RestoreManager:
                 action="restore",
                 success=False,
                 message=err_msg,
-                error_code="RESTORE_EXECUTION_ERROR"
+                error_code="RESTORE_EXECUTION_ERROR",
+                data={"adapter_error_code":getattr(e, 'code', None),
+                      "may_have_applied":getattr(e, 'may_have_applied', None)}
             )

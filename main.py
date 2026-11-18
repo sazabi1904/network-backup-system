@@ -402,6 +402,34 @@ def _connection_collection_menu(collect):
         print(f"[LOI] {type(exc).__name__}: {exc}")
 
 
+def _tv5_live(action, scope='managed'):
+    from cli import main as tv5_cli_main
+    inventory = input('Inventory lab cục bộ: ').strip()
+    name = input('Tên đúng một router: ').strip()
+    hosts = input('File known_hosts đã xác minh: ').strip()
+    backup_dir = input('Thư mục snapshot (Enter: backups/tv2-write): ').strip() or 'backups/tv2-write'
+    args = ['--inventory', inventory, action, '--device', name, '--known-hosts', hosts,
+            '--write-scope', scope, '--backup-dir', backup_dir]
+    print('Phạm vi: OSPFv2 backbone, cấu hình đang chạy; không ghi IP hoặc startup.' if scope == 'ospf'
+          else 'Phạm vi: identity MikroTik hoặc description interface FRR.')
+    if action == 'deploy':
+        template = 'ospf' if scope == 'ospf' else input('Template tv2_identity hoặc tv2_description: ').strip()
+        variables = input('File JSON biến template: ').strip()
+        args += ['--template', template, '--vars-file', variables]
+        if scope == 'ospf':
+            peers = input('Router ID neighbor dự kiến (cách nhau bằng dấu phẩy, Enter: chỉ xác minh cấu hình): ').strip()
+            for peer in filter(None, (value.strip() for value in peers.split(','))):
+                args += ['--expected-neighbor', peer]
+        if tv5_cli_main(args + ['--dry-run']) != 0:
+            return
+    else:
+        args += ['--snapshot-id', input('Snapshot ID đích: ').strip()]
+    if input('Nhập GHI để xác nhận thiết bị và phạm vi trên: ').strip() != 'GHI':
+        print('Đã hủy, chưa gửi thao tác ghi.')
+        return
+    print('Kết quả:', tv5_cli_main(args + ['--confirm-write']))
+
+
 def _tv5_menu():
     """TV5: dry-run / demo an toan; restore/deploy that can adapter ghi."""
     import tempfile
@@ -415,16 +443,28 @@ def _tv5_menu():
         print("2. Demo deploy tren FakeDevice (KHONG SSH)")
         print("3. Demo backup -> restore tren FakeDevice (KHONG SSH)")
         print("4. Thong tin ve Restore/Deploy router that")
+        print("5. Deploy SSH thật trong phạm vi đã hỗ trợ")
+        print("6. Restore SSH thật theo snapshot ID")
+        print("7. Deploy OSPFv2 backbone qua SSH thật")
+        print("8. Restore OSPF theo snapshot ID")
         print("0. Quay lai")
-        choice = _read_choice("Chon: ", set("01234"))
+        choice = _read_choice("Chon: ", set("012345678"))
         if choice == "0":
             return
         if choice == "4":
-            print("SSHAdapter TV2 hien chi doc: push_config/restore_config chua duoc ho tro.")
-            print("Chua the demo Restore/Deploy THAT tu menu chung; can TV2 va TV5 tich hop.")
+            print("Adapter mặc định chỉ đọc; mục 5/6 bật WriteSSHAdapter riêng cho tác vụ.")
+            print("Identity/description: mục 5/6. OSPFv2 backbone: mục 7/8, scope riêng, không lưu startup FRR.")
             _pause()
             continue
         try:
+            if choice in ('5', '6'):
+                _tv5_live('deploy' if choice == '5' else 'restore')
+                _pause()
+                continue
+            if choice in ('7', '8'):
+                _tv5_live('deploy' if choice == '7' else 'restore', scope='ospf')
+                _pause()
+                continue
             _, infos = _load_lab_inventory()
             selected = _select_infos(infos, allow_all=(choice != "3"))
             if not selected:
@@ -523,7 +563,7 @@ def run_full_menu():
         print("2. TV2 - Kiểm tra kết nối SSH router GNS3")
         print("3. TV3 - Inventory va Collector")
         print("4. TV4 - Backup / Change / Version / Scheduler / Report / Diff")
-        print("5. TV5 - OSPF dry-run / deploy demo / restore demo")
+        print("5. TV5 - Deploy / Restore / OSPF")
         print("0. Thoát")
         choice = _read_choice("Chọn chức năng: ", set("012345"))
         if choice == "0":

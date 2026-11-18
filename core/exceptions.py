@@ -27,3 +27,11 @@ class DeviceRestoreError(NetworkAutomationError):
 
 class UnsupportedFeatureError(NetworkAutomationError):
     """Thiet bi khong ho tro tinh nang."""
+
+
+class DeviceWriteError(DeviceCommandError):
+    """Sanitized write failure. True means remote state must be read again."""
+    def __init__(self, code, may_have_applied=True):
+        self.code = code
+        self.may_have_applied = may_have_applied
+        super().__init__(code + '; verify device state before retrying')

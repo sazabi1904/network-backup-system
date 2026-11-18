@@ -16,6 +16,7 @@ from core.exceptions import (DeviceAuthenticationError, DeviceConnectionError,
 
 
 class SSHAdapter(NetworkDevice):
+    write_scopes = ()
     DRIVERS = {"mikrotik": "mikrotik_routeros", "frr": "linux"}
 
     def __init__(self, info: DeviceInfo, host: Optional[str] = None,
@@ -140,8 +141,19 @@ class SSHAdapter(NetworkDevice):
         return output
 
     def get_running_config(self) -> str:
+        if self._connection is not None and self.info.platform == "mikrotik":
+            # Refresh before exports too: the first read can contain a stale prompt.
+            try:
+                self._connection.set_base_prompt()
+            except Exception:
+                self._close_on_error()
+                raise DeviceCommandError("Cannot refresh SSH prompt") from None
         command = "/export terse" if self.info.platform == "mikrotik" else "show running-config"
         output = self.send_command(command)
+        if self.info.platform == "mikrotik":
+            # Only a complete CLI prompt line, never arbitrary bracketed config.
+            output = "".join(line for line in output.splitlines(keepends=True)
+                             if not re.fullmatch(r"\s*\[[^\]\r\n]+@[^\]\r\n]+\]\s*>\s*", line))
         if self.info.platform == "frr":
             valid = bool(re.search(r"(?m)^frr version \S+", output) and
                          re.search(r"(?m)^end\s*$", output) and output.rstrip().endswith("end"))
@@ -177,9 +189,22 @@ class SSHAdapter(NetworkDevice):
 
 def register_device_adapters(*, timeout: float = 30,
                              known_hosts: Optional[str] = None,
-                             frr_shell: str = "auto") -> None:
+                             frr_shell: str = "auto", write: bool = False,
+                             write_scope: str = 'managed') -> None:
     """Register builders; credentials are resolved at connect(), per TV1 contract."""
     from core.factory import DeviceFactory
+    if write:
+        from devices.write_adapter import WriteSSHAdapter
+        if write_scope not in ('managed', 'ospf'):
+            raise ValueError('Unknown write scope')
+        adapter = WriteSSHAdapter
+        if write_scope == 'ospf':
+            from devices.ospf_adapter import OSPFSSHAdapter
+            adapter = OSPFSSHAdapter
+        for platform in ('mikrotik', 'frr'):
+            DeviceFactory.register(platform, partial(adapter, timeout=timeout,
+                known_hosts=known_hosts, frr_shell=frr_shell))
+        return
     from devices.mikrotik import MikroTikDevice
     from devices.frr import FRRDevice
     DeviceFactory.register("mikrotik", partial(
