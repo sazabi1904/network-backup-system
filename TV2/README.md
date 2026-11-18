@@ -40,3 +40,7 @@ Xem [đối chiếu đầu việc TV2 TV5, cách chạy và kết quả mới](D
 ## OSPF TV2–TV5
 
 Xem [scope OSPFv2 backbone, CLI/menu và nghiệm thu SSH thật](OSPF_TV2_TV5.md). Tài liệu tuần 1 ở trên là lịch sử lab.
+
+## Timeout export SSH
+
+Xem [xử lý export gián đoạn, retry chỉ đọc và bằng chứng kiểm thử](EXPORT_TIMEOUT.md).
