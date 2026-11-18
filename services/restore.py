@@ -80,6 +80,10 @@ class RestoreManager:
                 device.connect()  # Idempotent; recover a transport closed by a read timeout.
                 saved = manager.backup(device)
                 if not saved.success:
+                    raise RuntimeError(
+                        'Pre-restore backup failed; no restore was sent'
+                        f' [{saved.error_code or "UNKNOWN"}]'
+                    )
                     raise RuntimeError('Pre-restore backup failed; no restore was sent')
                 recovery_id = saved.data.get('snapshot_id')
                 candidates = [s for s in manager.list_snapshots(device_name) if s.snapshot_id == recovery_id]

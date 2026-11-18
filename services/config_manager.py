@@ -281,9 +281,11 @@ class ConfigManager:
                 backup_result = self.backup_manager.backup(device)
 
                 if not isinstance(backup_result, TaskResult) or not backup_result.success:
+                    reason = getattr(backup_result, 'message', 'Kết quả backup không hợp lệ')
+                    code = getattr(backup_result, 'error_code', None)
                     raise RuntimeError(
-                        f"Backup thất bại trên {dev_name}: "
-                        f"{getattr(backup_result, 'message', 'Kết quả backup không hợp lệ')}"
+                        f"Backup thất bại trên {dev_name}: {reason}"
+                        + (f" [{code}]" if code else "")
                     )
                 # ID trả về bởi TV4 là định danh snapshot vừa được tạo.
                 snapshot_id = backup_result.data.get("snapshot_id")
