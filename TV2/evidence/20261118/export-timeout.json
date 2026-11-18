@@ -1,0 +1,220 @@
+{
+  "base_commit": "e5b5d647c6d2e0fcb491d11a531e7d953f3df614",
+  "python": "3.9.6",
+  "netmiko": "4.8.0",
+  "pytest": {
+    "passed": 209,
+    "seconds": 0.66
+  },
+  "original_intermittent_timeout_reproduced": false,
+  "baseline_ab": {
+    "default": {
+      "passed": 20,
+      "total": 20,
+      "median_seconds": 0.76
+    },
+    "explicit": {
+      "passed": 20,
+      "total": 20,
+      "median_seconds": 0.688
+    }
+  },
+  "fixed_read_acceptance": {
+    "read_only": true,
+    "real_ssh": true,
+    "export_read_timeout": 30,
+    "export_retries": 1,
+    "same_session_passed": 40,
+    "same_session_total": 40,
+    "fresh_session_backup_passed": 40,
+    "fresh_session_backup_total": 40,
+    "stable_config": {
+      "MikroTik-R1": true,
+      "MikroTik-R2": true
+    },
+    "cross_version_r1_canonical_equal": true
+  },
+  "controlled_faults_real_ssh": [
+    {
+      "device": "MikroTik-R1",
+      "real_ssh": true,
+      "controlled_fault": true,
+      "case": "one_read_timeout",
+      "success": true,
+      "new_transport": true,
+      "diagnostics": [
+        {
+          "attempt": 1,
+          "phase": "output_prompt",
+          "code": "EXPORT_TIMEOUT",
+          "elapsed_ms": 1105,
+          "timeout_s": 30,
+          "received_bytes": null
+        },
+        {
+          "attempt": 2,
+          "phase": "complete",
+          "code": "OK",
+          "received_bytes": 459,
+          "elapsed_ms": 3161,
+          "timeout_s": 30
+        }
+      ]
+    },
+    {
+      "device": "MikroTik-R1",
+      "real_ssh": true,
+      "controlled_fault": true,
+      "case": "two_timeouts_block_restore",
+      "restore_success": false,
+      "restore_calls": 0,
+      "connections": 2,
+      "diagnostics": [
+        {
+          "attempt": 1,
+          "phase": "output_prompt",
+          "code": "EXPORT_TIMEOUT",
+          "elapsed_ms": 756,
+          "timeout_s": 30,
+          "received_bytes": null
+        },
+        {
+          "attempt": 2,
+          "phase": "output_prompt",
+          "code": "EXPORT_TIMEOUT",
+          "elapsed_ms": 3073,
+          "timeout_s": 30,
+          "received_bytes": null
+        }
+      ]
+    },
+    {
+      "device": "MikroTik-R2",
+      "real_ssh": true,
+      "controlled_fault": true,
+      "case": "one_read_timeout",
+      "success": true,
+      "new_transport": true,
+      "diagnostics": [
+        {
+          "attempt": 1,
+          "phase": "output_prompt",
+          "code": "EXPORT_TIMEOUT",
+          "elapsed_ms": 1100,
+          "timeout_s": 30,
+          "received_bytes": null
+        },
+        {
+          "attempt": 2,
+          "phase": "complete",
+          "code": "OK",
+          "received_bytes": 459,
+          "elapsed_ms": 3107,
+          "timeout_s": 30
+        }
+      ]
+    },
+    {
+      "device": "MikroTik-R2",
+      "real_ssh": true,
+      "controlled_fault": true,
+      "case": "two_timeouts_block_restore",
+      "restore_success": false,
+      "restore_calls": 0,
+      "connections": 2,
+      "diagnostics": [
+        {
+          "attempt": 1,
+          "phase": "output_prompt",
+          "code": "EXPORT_TIMEOUT",
+          "elapsed_ms": 827,
+          "timeout_s": 30,
+          "received_bytes": null
+        },
+        {
+          "attempt": 2,
+          "phase": "output_prompt",
+          "code": "EXPORT_TIMEOUT",
+          "elapsed_ms": 3170,
+          "timeout_s": 30,
+          "received_bytes": null
+        }
+      ]
+    }
+  ],
+  "ospf_regression": [
+    {
+      "device": "MikroTik-R1",
+      "deploy": true,
+      "idempotence": true,
+      "convergence": true,
+      "ping": [
+        {
+          "target": "10.255.0.3",
+          "passed": true
+        },
+        {
+          "target": "10.255.0.4",
+          "passed": true
+        }
+      ],
+      "rollback": true,
+      "rollback_exact_hash_match": true,
+      "reconvergence": true,
+      "restore_exact_hash_match": true
+    },
+    {
+      "device": "MikroTik-R2",
+      "deploy": true,
+      "idempotence": true,
+      "convergence": true,
+      "ping": [
+        {
+          "target": "10.255.0.3",
+          "passed": true
+        },
+        {
+          "target": "10.255.0.4",
+          "passed": true
+        }
+      ],
+      "rollback": true,
+      "rollback_exact_hash_match": true,
+      "reconvergence": true,
+      "restore_exact_hash_match": true
+    },
+    {
+      "device": "FRR-R3",
+      "deploy": true,
+      "idempotence": true,
+      "convergence": true,
+      "ping": [
+        {
+          "target": "10.255.0.4",
+          "passed": true
+        }
+      ],
+      "rollback": true,
+      "rollback_exact_hash_match": true,
+      "reconvergence": true,
+      "restore_exact_hash_match": true
+    },
+    {
+      "device": "FRR-R4",
+      "deploy": true,
+      "idempotence": true,
+      "convergence": true,
+      "ping": [
+        {
+          "target": "10.255.0.3",
+          "passed": true
+        }
+      ],
+      "rollback": true,
+      "rollback_exact_hash_match": true,
+      "reconvergence": true,
+      "restore_exact_hash_match": true
+    }
+  ],
+  "cleanup_original_configs_exact": true
+}
