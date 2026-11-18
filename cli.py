@@ -11,6 +11,7 @@ Dung --demo de chay bang FakeDevice, khong can router that.
 import argparse
 import json
 import sys
+import math
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
@@ -67,6 +68,9 @@ def _run_on_devices(infos: List[DeviceInfo], operation, demo: bool, **options) -
 
 
 def _write_options(args):
+    if args.export_read_timeout is not None and (
+            not math.isfinite(args.export_read_timeout) or args.export_read_timeout <= 0):
+        raise ValueError('--export-read-timeout must be positive and finite')
     enabled = args.write_scope in ('managed', 'ospf')
     if enabled and not args.demo:
         if not args.device or len(args.device) != 1:
@@ -78,7 +82,8 @@ def _write_options(args):
         if args.command == 'restore' and not args.snapshot_id:
             raise ValueError('Real restore requires explicit --snapshot-id')
     return dict(write=enabled and not args.demo, known_hosts=args.known_hosts,
-                frr_shell='linux' if enabled else 'auto', write_scope=args.write_scope or 'managed')
+                frr_shell='linux' if enabled else 'auto', write_scope=args.write_scope or 'managed',
+                export_read_timeout=args.export_read_timeout, export_retries=args.export_retries)
 
 
 # ---------- inventory ----------
@@ -257,6 +262,10 @@ def build_parser() -> argparse.ArgumentParser:
                              help='managed: identity/description; ospf: OSPFv2 backbone running configuration')
         command.add_argument('--known-hosts')
         command.add_argument('--confirm-write', action='store_true')
+        command.add_argument('--export-read-timeout', type=float,
+                             help='RouterOS export read timeout; independent of OSPF convergence')
+        command.add_argument('--export-retries', type=int, choices=(0, 1), default=1,
+                             help='Reconnect and retry only the export read, at most once')
 
     return parser
 

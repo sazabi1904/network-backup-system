@@ -20,6 +20,8 @@ def main():
     parser.add_argument("--username", required=True)
     parser.add_argument("--port", type=int, default=22)
     parser.add_argument("--timeout", type=float, default=30)
+    parser.add_argument('--export-read-timeout', type=float)
+    parser.add_argument('--export-retries', type=int, choices=(0, 1), default=1)
     parser.add_argument("--known-hosts")
     parser.add_argument("--frr-shell", choices=["auto", "linux", "vtysh"], default="auto")
     args = parser.parse_args()
@@ -30,7 +32,8 @@ def main():
         info = DeviceInfo(args.name, args.host, args.platform, port=args.port)
         with SSHAdapter(info, username=args.username, password=password,
                         timeout=args.timeout, known_hosts=args.known_hosts,
-                        frr_shell=args.frr_shell) as device:
+                        frr_shell=args.frr_shell, export_read_timeout=args.export_read_timeout,
+                        export_retries=args.export_retries) as device:
             device.probe()
             config = device.get_running_config()
         print(f"PASS: probe and config validated; {len(config.encode('utf-8'))} bytes")

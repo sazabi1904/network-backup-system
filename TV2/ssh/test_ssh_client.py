@@ -25,6 +25,7 @@ class AdapterTests(unittest.TestCase):
         self.connect = self.patch.start()
         self.addCleanup(self.patch.stop)
         self.session = self.connect.return_value
+        self.session.set_base_prompt.return_value = '[backup@lab]'
         self.info = DeviceInfo('MT-R1', '192.168.10.21', 'mikrotik')
 
     def device(self, platform='mikrotik'):
@@ -40,7 +41,7 @@ class AdapterTests(unittest.TestCase):
                 d.connect(); env.assert_called_once_with('lab'); d.disconnect()
 
     def test_mikrotik_config(self):
-        self.session.send_command.return_value = MT
+        self.session.send_command.return_value = MT+'[backup@lab] >'
         with self.device() as d:
             self.assertEqual(d.info,self.info)
             self.assertEqual(d.get_running_config(),MT)
@@ -82,7 +83,9 @@ class AdapterTests(unittest.TestCase):
     def test_read_timeout_cleanup(self):
         self.session.send_command.side_effect = ReadTimeout('private-value')
         with self.assertRaises(DeviceTimeoutError):
-            with self.device() as d: d.get_running_config()
+            with self.device() as d:
+                d.export_retries = 0
+                d.get_running_config()
         self.session.disconnect.assert_called_once()
 
     def test_read_only(self):
@@ -101,7 +104,8 @@ class AdapterTests(unittest.TestCase):
         from services.backup_scheduler import BackupScheduler
         for platform,content in [('mikrotik',MT),('frr',FRR)]:
             with tempfile.TemporaryDirectory() as directory:
-                self.session.send_command.return_value = content
+                wire_content = (content+'[backup@lab] >') if platform=='mikrotik' else content
+                self.session.send_command.return_value = wire_content
                 manager = BackupManager(directory)
                 with self.device(platform) as d:
                     self.assertTrue(manager.backup(d).success)
@@ -109,7 +113,7 @@ class AdapterTests(unittest.TestCase):
                     raw = next(Path(directory).glob('*.cfg')).read_bytes()
                     self.assertEqual(hashlib.sha256(raw).hexdigest(),meta['sha256'])
                     self.assertFalse(ChangeDetector(manager).check(d).data['changed'])
-                    self.session.send_command.return_value = content.replace('lab','lab2') if platform == 'mikrotik' else content.replace('.25','.26')
+                    self.session.send_command.return_value = (content.replace('lab','lab2')+'[backup@lab] >') if platform == 'mikrotik' else content.replace('.25','.26')
                     self.assertTrue(ChangeDetector(manager).check(d).data['changed'])
                 self.assertTrue(BackupScheduler(manager).run_once([self.device(platform)])[0].success)
 

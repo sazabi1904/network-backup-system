@@ -19,8 +19,9 @@ class RouterTransport:
         self.writes=[]; self.fail_after_apply=False; self.ignore_write=False; self.tick=0
         self.prompt_name=self.name
 
-    def set_base_prompt(self):
+    def set_base_prompt(self, **kwargs):
         self.prompt_name=self.name
+        return f'[admin@{self.name}]'
 
     def config(self):
         self.tick+=1
@@ -35,7 +36,10 @@ class RouterTransport:
 
     def send_command(self, command, **kwargs):
         if command=='/export terse' or 'show running-config' in command:
-            return self.config()
+            content = self.config()
+            if self.platform == 'mikrotik' and kwargs.get('strip_prompt') is False:
+                content += f'\n[admin@{self.name}] >'
+            return content
         self.writes.append(command)
         import re
         name=re.search(r'(?:name=|hostname )([A-Za-z][A-Za-z0-9_-]*)',command).group(1)
