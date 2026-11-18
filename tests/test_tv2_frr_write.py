@@ -95,6 +95,7 @@ def test_rejected_write_never_reports_success(router):
 def test_normalizes_timestamp_without_changing_configuration():
     d=WriteSSHAdapter(DeviceInfo('R1','192.0.2.1','mikrotik'))
     session=Mock()
+    session.set_base_prompt.return_value='[admin@R1]'
     session.send_command.return_value='# 2026-11-17 10:00:00 by RouterOS 7.23.8\n/system identity set name=R1\n[admin@R1] >'
     d._connection=session
     assert d.get_running_config().rstrip()=='# RouterOS 7.23.8\n/system identity set name=R1'
