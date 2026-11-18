@@ -61,6 +61,9 @@ class ConfigManager:
         platform = device.info.platform.strip().lower()
         # Không tự đổi sang template OSPF nếu người dùng yêu cầu template khác.
         name = template_name[:-3] if template_name.endswith(".j2") else template_name
+        if name in ('ospf', f'{platform}_ospf'):
+            from devices.ospf_adapter import validate_variables
+            validate_variables(variables)
         if not name or "/" in name or "\\" in name or ".." in name:
             raise ValueError("Tên template không hợp lệ")
         tpl_candidates = [f"{platform}_{name}.j2", f"{name}.j2"]
@@ -170,7 +173,19 @@ class ConfigManager:
 
         return results
 
-    def deploy(
+    def deploy(self, devices, template_name, variables):
+        from core.operation_lock import device_operation
+        results = []
+        for device in devices:
+            try:
+                with device_operation(device):
+                    results.extend(self._deploy([device], template_name, variables))
+            except RuntimeError as exc:
+                results.append(TaskResult(device.info.name, 'deploy', False, str(exc),
+                                          error_code='DEVICE_BUSY'))
+        return results
+
+    def _deploy(
         self,
         devices: Sequence[NetworkDevice],
         template_name: str,
@@ -217,6 +232,12 @@ class ConfigManager:
 
                 commands_list = self._commands(config_text)
 
+                if getattr(device, 'write_scopes', None) == ():
+                    raise RuntimeError('Adapter is read-only; enable an explicit write scope')
+                preflight = getattr(device, 'validate_config_commands', None)
+                if callable(preflight):
+                    preflight(commands_list)
+
                 logger.info(
                     "[ConfigManager] Đã render %d lệnh cho %s.",
                     len(commands_list),
@@ -260,9 +281,11 @@ class ConfigManager:
                 backup_result = self.backup_manager.backup(device)
 
                 if not isinstance(backup_result, TaskResult) or not backup_result.success:
+                    reason = getattr(backup_result, 'message', 'Kết quả backup không hợp lệ')
+                    code = getattr(backup_result, 'error_code', None)
                     raise RuntimeError(
-                        f"Backup thất bại trên {dev_name}: "
-                        f"{getattr(backup_result, 'message', 'Kết quả backup không hợp lệ')}"
+                        f"Backup thất bại trên {dev_name}: {reason}"
+                        + (f" [{code}]" if code else "")
                     )
                 # ID trả về bởi TV4 là định danh snapshot vừa được tạo.
                 snapshot_id = backup_result.data.get("snapshot_id")
@@ -426,6 +449,8 @@ class ConfigManager:
                             "rollback_attempted": rollback_attempted,
                             "rollback_error": rollback_error,
                             "push_started": push_started,
+                            "adapter_error_code": getattr(e, 'code', None),
+                            "may_have_applied": getattr(e, 'may_have_applied', push_started),
                         },
                         error_code="DEPLOY_EXECUTION_ERROR",
                     )
