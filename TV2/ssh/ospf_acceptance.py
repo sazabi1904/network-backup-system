@@ -21,8 +21,9 @@ from services.verification import VerificationService
 from TV2.ssh.acceptance import ControlledFailure
 
 
-def run(infos, plans, known_hosts, backup_dir, timeout=90):
-    devices = [OSPFSSHAdapter(info, known_hosts=known_hosts, frr_shell='linux') for info in infos]
+def run(infos, plans, known_hosts, backup_dir, timeout=90, export_read_timeout=None, export_retries=1):
+    devices = [OSPFSSHAdapter(info, known_hosts=known_hosts, frr_shell='linux',
+                              export_read_timeout=export_read_timeout, export_retries=export_retries) for info in infos]
     backup = BackupManager(backup_dir)
     restore = RestoreManager(backup_manager=backup)
     verifier = VerificationService()
@@ -132,7 +133,10 @@ def main(argv=None):
     p.add_argument('--known-hosts', required=True)
     p.add_argument('--backup-dir', default='backups/ospf-acceptance')
     p.add_argument('--report-dir', default='reports/ospf-acceptance')
-    p.add_argument('--timeout', type=float, default=90)
+    p.add_argument('--convergence-timeout', '--timeout', dest='timeout', type=float, default=90,
+                   help='OSPF convergence seconds; --timeout retained for compatibility')
+    p.add_argument('--export-read-timeout', type=float)
+    p.add_argument('--export-retries', type=int, choices=(0, 1), default=1)
     p.add_argument('--confirm-write', action='store_true', required=True)
     args = p.parse_args(argv)
     if not 0 < args.timeout <= 600:
@@ -143,7 +147,8 @@ def main(argv=None):
     selected = [info for info in infos if info.name in plans]
     if not plans or set(plans) != {info.name for info in selected}:
         p.error('Plan must contain existing, unique inventory device names')
-    records = run(selected, plans, args.known_hosts, args.backup_dir, args.timeout)
+    records = run(selected, plans, args.known_hosts, args.backup_dir, args.timeout,
+                  args.export_read_timeout, args.export_retries)
     folder = Path(args.report_dir)
     folder.mkdir(parents=True, exist_ok=True)
     dest = folder / (datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')+'.json')
