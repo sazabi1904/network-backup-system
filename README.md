@@ -1,6 +1,6 @@
 # Network Backup System — Project khung TV1
 
-> **Da ghep adapter SSH TV2 voi service TV3 qua main.py.** CLI doc Inventory, kiem tra ket noi, thu thap MikroTik/FRR va xuat JSON/CSV. Luong tich hop duoc kiem thu voi transport SSH mo phong. Nghiem thu SSH tren router GNS3 van can thuc hien trong lab.
+> **TV2–TV5:** đã bổ sung adapter ghi opt-in, strict restore và OSPFv2 backbone. Xem [phạm vi, cách chạy và kết quả nghiệm thu SSH thật](TV2/OSPF_TV2_TV5.md). Adapter mặc định vẫn chỉ đọc.
 
 ## Yeu cau
 

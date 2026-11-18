@@ -1,0 +1,118 @@
+[
+  {
+    "device": "MikroTik-R1",
+    "platform": "mikrotik",
+    "scope": "identity",
+    "rollback_test": true,
+    "success": true,
+    "real_ssh": true,
+    "probe_success": true,
+    "baseline_id": "MikroTik-R1_20261118_093657_5a165796",
+    "deploy": {
+      "device": "MikroTik-R1",
+      "action": "deploy",
+      "success": false,
+      "message": "Lỗi triển khai cấu hình trên MikroTik-R1: Xác minh sau deploy thất bại: {'passed': False, 'actual_change_verified': True, 'reason': 'controlled rollback test'}",
+      "data": {
+        "rolled_back": true,
+        "rollback_attempted": true,
+        "rollback_error": null,
+        "push_started": true,
+        "adapter_error_code": null,
+        "may_have_applied": true
+      },
+      "error_code": "DEPLOY_EXECUTION_ERROR"
+    },
+    "after_rollback": {
+      "passed": true,
+      "exact_hash_match": true
+    }
+  },
+  {
+    "device": "MikroTik-R2",
+    "platform": "mikrotik",
+    "scope": "identity",
+    "rollback_test": true,
+    "success": true,
+    "real_ssh": true,
+    "probe_success": true,
+    "baseline_id": "MikroTik-R2_20261118_093708_cc59a066",
+    "deploy": {
+      "device": "MikroTik-R2",
+      "action": "deploy",
+      "success": false,
+      "message": "Lỗi triển khai cấu hình trên MikroTik-R2: Xác minh sau deploy thất bại: {'passed': False, 'actual_change_verified': True, 'reason': 'controlled rollback test'}",
+      "data": {
+        "rolled_back": true,
+        "rollback_attempted": true,
+        "rollback_error": null,
+        "push_started": true,
+        "adapter_error_code": null,
+        "may_have_applied": true
+      },
+      "error_code": "DEPLOY_EXECUTION_ERROR"
+    },
+    "after_rollback": {
+      "passed": true,
+      "exact_hash_match": true
+    }
+  },
+  {
+    "device": "FRR-R3",
+    "platform": "frr",
+    "scope": "interface-description",
+    "rollback_test": true,
+    "success": true,
+    "real_ssh": true,
+    "probe_success": true,
+    "baseline_id": "FRR-R3_20261118_093717_e5e714cc",
+    "deploy": {
+      "device": "FRR-R3",
+      "action": "deploy",
+      "success": false,
+      "message": "Lỗi triển khai cấu hình trên FRR-R3: Xác minh sau deploy thất bại: {'passed': False, 'actual_change_verified': True, 'reason': 'controlled rollback test'}",
+      "data": {
+        "rolled_back": true,
+        "rollback_attempted": true,
+        "rollback_error": null,
+        "push_started": true,
+        "adapter_error_code": null,
+        "may_have_applied": true
+      },
+      "error_code": "DEPLOY_EXECUTION_ERROR"
+    },
+    "after_rollback": {
+      "passed": true,
+      "exact_hash_match": true
+    }
+  },
+  {
+    "device": "FRR-R4",
+    "platform": "frr",
+    "scope": "interface-description",
+    "rollback_test": true,
+    "success": true,
+    "real_ssh": true,
+    "probe_success": true,
+    "baseline_id": "FRR-R4_20261118_093725_0cd5763a",
+    "deploy": {
+      "device": "FRR-R4",
+      "action": "deploy",
+      "success": false,
+      "message": "Lỗi triển khai cấu hình trên FRR-R4: Xác minh sau deploy thất bại: {'passed': False, 'actual_change_verified': True, 'reason': 'controlled rollback test'}",
+      "data": {
+        "rolled_back": true,
+        "rollback_attempted": true,
+        "rollback_error": null,
+        "push_started": true,
+        "adapter_error_code": null,
+        "may_have_applied": true
+      },
+      "error_code": "DEPLOY_EXECUTION_ERROR"
+    },
+    "after_rollback": {
+      "passed": true,
+      "exact_hash_match": true
+    }
+  }
+]

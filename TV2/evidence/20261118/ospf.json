@@ -1,0 +1,634 @@
+[
+  {
+    "device": "MikroTik-R1",
+    "real_ssh": true,
+    "scope": "ospf-backbone",
+    "success": true,
+    "baseline_id": "MikroTik-R1_20261118_145837_116d6b1c",
+    "deploy": {
+      "device": "MikroTik-R1",
+      "action": "deploy",
+      "success": true,
+      "message": "Đã gửi lệnh và xác minh cấu hình cho MikroTik-R1",
+      "data": {
+        "push_output": "OSPF backbone running configuration applied and verified",
+        "verified": true,
+        "verification": {
+          "device_name": "MikroTik-R1",
+          "passed": true,
+          "scope": "ospf-backbone",
+          "verification_mode": "ospf-configuration",
+          "neighbor_convergence_checked": false
+        },
+        "snapshot_id": "MikroTik-R1_20261118_145847_414480cf"
+      },
+      "error_code": null
+    },
+    "idempotent_deploy": {
+      "device": "MikroTik-R1",
+      "action": "deploy",
+      "success": true,
+      "message": "Đã gửi lệnh và xác minh cấu hình cho MikroTik-R1",
+      "data": {
+        "push_output": "OSPF backbone running configuration applied and verified",
+        "verified": true,
+        "verification": {
+          "device_name": "MikroTik-R1",
+          "passed": true,
+          "scope": "ospf-backbone",
+          "verification_mode": "ospf-configuration",
+          "neighbor_convergence_checked": false
+        },
+        "snapshot_id": "MikroTik-R1_20261118_145852_859ff879"
+      },
+      "error_code": null
+    },
+    "convergence": {
+      "device_name": "MikroTik-R1",
+      "passed": true,
+      "verification_mode": "ospf-convergence",
+      "neighbors": {
+        "10.255.0.2": [
+          "Full"
+        ],
+        "10.255.0.3": [
+          "Full"
+        ],
+        "10.255.0.4": [
+          "Full"
+        ]
+      },
+      "expected_neighbors": [
+        "10.255.0.2",
+        "10.255.0.3",
+        "10.255.0.4"
+      ],
+      "expected_routes": [
+        "10.255.0.3/32",
+        "10.255.0.4/32"
+      ],
+      "missing_routes": []
+    },
+    "data_plane": [
+      {
+        "target": "10.255.0.3",
+        "passed": true
+      },
+      {
+        "target": "10.255.0.4",
+        "passed": true
+      }
+    ],
+    "controlled_failure": {
+      "device": "MikroTik-R1",
+      "action": "deploy",
+      "success": false,
+      "message": "Lỗi triển khai cấu hình trên MikroTik-R1: Xác minh sau deploy thất bại: {'passed': False, 'actual_change_verified': True, 'reason': 'controlled rollback test'}",
+      "data": {
+        "rolled_back": true,
+        "rollback_attempted": true,
+        "rollback_error": null,
+        "push_started": true,
+        "adapter_error_code": null,
+        "may_have_applied": true
+      },
+      "error_code": "DEPLOY_EXECUTION_ERROR"
+    },
+    "after_rollback": {
+      "device_name": "MikroTik-R1",
+      "passed": true,
+      "exact_hash_match": true,
+      "missing_lines": [],
+      "unexpected_lines": [],
+      "missing_line_count": 0,
+      "unexpected_line_count": 0,
+      "verification_mode": "exact-configuration",
+      "conflicting_hostname": false,
+      "wrong_hostname": false,
+      "actual_hostnames": [
+        "MikroTik-R1"
+      ]
+    },
+    "after_rollback_convergence": {
+      "device_name": "MikroTik-R1",
+      "passed": true,
+      "verification_mode": "ospf-convergence",
+      "neighbors": {
+        "10.255.0.2": [
+          "Full"
+        ],
+        "10.255.0.3": [
+          "Full"
+        ],
+        "10.255.0.4": [
+          "Full"
+        ]
+      },
+      "expected_neighbors": [
+        "10.255.0.2",
+        "10.255.0.3",
+        "10.255.0.4"
+      ],
+      "expected_routes": [
+        "10.255.0.3/32",
+        "10.255.0.4/32"
+      ],
+      "missing_routes": []
+    },
+    "restore": {
+      "device": "MikroTik-R1",
+      "action": "restore",
+      "success": true,
+      "message": "Khôi phục cấu hình thành công",
+      "data": {
+        "snapshot_id": "MikroTik-R1_20261118_145837_116d6b1c",
+        "recovery_snapshot_id": "MikroTik-R1_20261118_150108_91df2d38",
+        "device_name": "MikroTik-R1",
+        "passed": true,
+        "exact_hash_match": true,
+        "missing_lines": [],
+        "unexpected_lines": [],
+        "missing_line_count": 0,
+        "unexpected_line_count": 0,
+        "verification_mode": "exact-configuration",
+        "conflicting_hostname": false,
+        "wrong_hostname": false,
+        "actual_hostnames": [
+          "MikroTik-R1"
+        ]
+      },
+      "error_code": null
+    }
+  },
+  {
+    "device": "MikroTik-R2",
+    "real_ssh": true,
+    "scope": "ospf-backbone",
+    "success": true,
+    "baseline_id": "MikroTik-R2_20261118_145842_724ef243",
+    "deploy": {
+      "device": "MikroTik-R2",
+      "action": "deploy",
+      "success": true,
+      "message": "Đã gửi lệnh và xác minh cấu hình cho MikroTik-R2",
+      "data": {
+        "push_output": "OSPF backbone running configuration applied and verified",
+        "verified": true,
+        "verification": {
+          "device_name": "MikroTik-R2",
+          "passed": true,
+          "scope": "ospf-backbone",
+          "verification_mode": "ospf-configuration",
+          "neighbor_convergence_checked": false
+        },
+        "snapshot_id": "MikroTik-R2_20261118_145856_82ef565b"
+      },
+      "error_code": null
+    },
+    "idempotent_deploy": {
+      "device": "MikroTik-R2",
+      "action": "deploy",
+      "success": true,
+      "message": "Đã gửi lệnh và xác minh cấu hình cho MikroTik-R2",
+      "data": {
+        "push_output": "OSPF backbone running configuration applied and verified",
+        "verified": true,
+        "verification": {
+          "device_name": "MikroTik-R2",
+          "passed": true,
+          "scope": "ospf-backbone",
+          "verification_mode": "ospf-configuration",
+          "neighbor_convergence_checked": false
+        },
+        "snapshot_id": "MikroTik-R2_20261118_145902_0719c18c"
+      },
+      "error_code": null
+    },
+    "convergence": {
+      "device_name": "MikroTik-R2",
+      "passed": true,
+      "verification_mode": "ospf-convergence",
+      "neighbors": {
+        "10.255.0.1": [
+          "Full"
+        ],
+        "10.255.0.3": [
+          "Full"
+        ],
+        "10.255.0.4": [
+          "Full"
+        ]
+      },
+      "expected_neighbors": [
+        "10.255.0.1",
+        "10.255.0.3",
+        "10.255.0.4"
+      ],
+      "expected_routes": [
+        "10.255.0.3/32",
+        "10.255.0.4/32"
+      ],
+      "missing_routes": []
+    },
+    "data_plane": [
+      {
+        "target": "10.255.0.3",
+        "passed": true
+      },
+      {
+        "target": "10.255.0.4",
+        "passed": true
+      }
+    ],
+    "controlled_failure": {
+      "device": "MikroTik-R2",
+      "action": "deploy",
+      "success": false,
+      "message": "Lỗi triển khai cấu hình trên MikroTik-R2: Xác minh sau deploy thất bại: {'passed': False, 'actual_change_verified': True, 'reason': 'controlled rollback test'}",
+      "data": {
+        "rolled_back": true,
+        "rollback_attempted": true,
+        "rollback_error": null,
+        "push_started": true,
+        "adapter_error_code": null,
+        "may_have_applied": true
+      },
+      "error_code": "DEPLOY_EXECUTION_ERROR"
+    },
+    "after_rollback": {
+      "device_name": "MikroTik-R2",
+      "passed": true,
+      "exact_hash_match": true,
+      "missing_lines": [],
+      "unexpected_lines": [],
+      "missing_line_count": 0,
+      "unexpected_line_count": 0,
+      "verification_mode": "exact-configuration",
+      "conflicting_hostname": false,
+      "wrong_hostname": false,
+      "actual_hostnames": [
+        "MikroTik-R2"
+      ]
+    },
+    "after_rollback_convergence": {
+      "device_name": "MikroTik-R2",
+      "passed": true,
+      "verification_mode": "ospf-convergence",
+      "neighbors": {
+        "10.255.0.1": [
+          "Full"
+        ],
+        "10.255.0.3": [
+          "Full"
+        ],
+        "10.255.0.4": [
+          "Full"
+        ]
+      },
+      "expected_neighbors": [
+        "10.255.0.1",
+        "10.255.0.3",
+        "10.255.0.4"
+      ],
+      "expected_routes": [
+        "10.255.0.3/32",
+        "10.255.0.4/32"
+      ],
+      "missing_routes": []
+    },
+    "restore": {
+      "device": "MikroTik-R2",
+      "action": "restore",
+      "success": true,
+      "message": "Khôi phục cấu hình thành công",
+      "data": {
+        "snapshot_id": "MikroTik-R2_20261118_145842_724ef243",
+        "recovery_snapshot_id": "MikroTik-R2_20261118_150105_9ebb5304",
+        "device_name": "MikroTik-R2",
+        "passed": true,
+        "exact_hash_match": true,
+        "missing_lines": [],
+        "unexpected_lines": [],
+        "missing_line_count": 0,
+        "unexpected_line_count": 0,
+        "verification_mode": "exact-configuration",
+        "conflicting_hostname": false,
+        "wrong_hostname": false,
+        "actual_hostnames": [
+          "MikroTik-R2"
+        ]
+      },
+      "error_code": null
+    }
+  },
+  {
+    "device": "FRR-R3",
+    "real_ssh": true,
+    "scope": "ospf-backbone",
+    "success": true,
+    "baseline_id": "FRR-R3_20261118_145843_13e4252d",
+    "deploy": {
+      "device": "FRR-R3",
+      "action": "deploy",
+      "success": true,
+      "message": "Đã gửi lệnh và xác minh cấu hình cho FRR-R3",
+      "data": {
+        "push_output": "OSPF backbone running configuration applied and verified",
+        "verified": true,
+        "verification": {
+          "device_name": "FRR-R3",
+          "passed": true,
+          "scope": "ospf-backbone",
+          "verification_mode": "ospf-configuration",
+          "neighbor_convergence_checked": false
+        },
+        "snapshot_id": "FRR-R3_20261118_145906_94dd05cd"
+      },
+      "error_code": null
+    },
+    "idempotent_deploy": {
+      "device": "FRR-R3",
+      "action": "deploy",
+      "success": true,
+      "message": "Đã gửi lệnh và xác minh cấu hình cho FRR-R3",
+      "data": {
+        "push_output": "OSPF backbone running configuration applied and verified",
+        "verified": true,
+        "verification": {
+          "device_name": "FRR-R3",
+          "passed": true,
+          "scope": "ospf-backbone",
+          "verification_mode": "ospf-configuration",
+          "neighbor_convergence_checked": false
+        },
+        "snapshot_id": "FRR-R3_20261118_145911_286794d9"
+      },
+      "error_code": null
+    },
+    "convergence": {
+      "device_name": "FRR-R3",
+      "passed": true,
+      "verification_mode": "ospf-convergence",
+      "neighbors": {
+        "10.255.0.1": [
+          "Full/Backup"
+        ],
+        "10.255.0.2": [
+          "Full/DR"
+        ],
+        "10.255.0.4": [
+          "2-Way/DROther"
+        ]
+      },
+      "expected_neighbors": [
+        "10.255.0.1",
+        "10.255.0.2",
+        "10.255.0.4"
+      ],
+      "expected_routes": [
+        "10.255.0.4/32"
+      ],
+      "missing_routes": []
+    },
+    "data_plane": [
+      {
+        "target": "10.255.0.4",
+        "passed": true
+      }
+    ],
+    "controlled_failure": {
+      "device": "FRR-R3",
+      "action": "deploy",
+      "success": false,
+      "message": "Lỗi triển khai cấu hình trên FRR-R3: Xác minh sau deploy thất bại: {'passed': False, 'actual_change_verified': True, 'reason': 'controlled rollback test'}",
+      "data": {
+        "rolled_back": true,
+        "rollback_attempted": true,
+        "rollback_error": null,
+        "push_started": true,
+        "adapter_error_code": null,
+        "may_have_applied": true
+      },
+      "error_code": "DEPLOY_EXECUTION_ERROR"
+    },
+    "after_rollback": {
+      "device_name": "FRR-R3",
+      "passed": true,
+      "exact_hash_match": true,
+      "missing_lines": [],
+      "unexpected_lines": [],
+      "missing_line_count": 0,
+      "unexpected_line_count": 0,
+      "verification_mode": "exact-configuration",
+      "conflicting_hostname": false,
+      "wrong_hostname": false,
+      "actual_hostnames": [
+        "frr"
+      ]
+    },
+    "after_rollback_convergence": {
+      "device_name": "FRR-R3",
+      "passed": true,
+      "verification_mode": "ospf-convergence",
+      "neighbors": {
+        "10.255.0.1": [
+          "Full/Backup"
+        ],
+        "10.255.0.2": [
+          "Full/DR"
+        ],
+        "10.255.0.4": [
+          "2-Way/DROther"
+        ]
+      },
+      "expected_neighbors": [
+        "10.255.0.1",
+        "10.255.0.2",
+        "10.255.0.4"
+      ],
+      "expected_routes": [
+        "10.255.0.4/32"
+      ],
+      "missing_routes": []
+    },
+    "restore": {
+      "device": "FRR-R3",
+      "action": "restore",
+      "success": true,
+      "message": "Khôi phục cấu hình thành công",
+      "data": {
+        "snapshot_id": "FRR-R3_20261118_145843_13e4252d",
+        "recovery_snapshot_id": "FRR-R3_20261118_150100_0632bb3e",
+        "device_name": "FRR-R3",
+        "passed": true,
+        "exact_hash_match": true,
+        "missing_lines": [],
+        "unexpected_lines": [],
+        "missing_line_count": 0,
+        "unexpected_line_count": 0,
+        "verification_mode": "exact-configuration",
+        "conflicting_hostname": false,
+        "wrong_hostname": false,
+        "actual_hostnames": [
+          "frr"
+        ]
+      },
+      "error_code": null
+    }
+  },
+  {
+    "device": "FRR-R4",
+    "real_ssh": true,
+    "scope": "ospf-backbone",
+    "success": true,
+    "baseline_id": "FRR-R4_20261118_145845_44f59fa7",
+    "deploy": {
+      "device": "FRR-R4",
+      "action": "deploy",
+      "success": true,
+      "message": "Đã gửi lệnh và xác minh cấu hình cho FRR-R4",
+      "data": {
+        "push_output": "OSPF backbone running configuration applied and verified",
+        "verified": true,
+        "verification": {
+          "device_name": "FRR-R4",
+          "passed": true,
+          "scope": "ospf-backbone",
+          "verification_mode": "ospf-configuration",
+          "neighbor_convergence_checked": false
+        },
+        "snapshot_id": "FRR-R4_20261118_145914_3b115395"
+      },
+      "error_code": null
+    },
+    "idempotent_deploy": {
+      "device": "FRR-R4",
+      "action": "deploy",
+      "success": true,
+      "message": "Đã gửi lệnh và xác minh cấu hình cho FRR-R4",
+      "data": {
+        "push_output": "OSPF backbone running configuration applied and verified",
+        "verified": true,
+        "verification": {
+          "device_name": "FRR-R4",
+          "passed": true,
+          "scope": "ospf-backbone",
+          "verification_mode": "ospf-configuration",
+          "neighbor_convergence_checked": false
+        },
+        "snapshot_id": "FRR-R4_20261118_145920_aea3fa0e"
+      },
+      "error_code": null
+    },
+    "convergence": {
+      "device_name": "FRR-R4",
+      "passed": true,
+      "verification_mode": "ospf-convergence",
+      "neighbors": {
+        "10.255.0.1": [
+          "Full/Backup"
+        ],
+        "10.255.0.2": [
+          "Full/DR"
+        ],
+        "10.255.0.3": [
+          "2-Way/DROther"
+        ]
+      },
+      "expected_neighbors": [
+        "10.255.0.1",
+        "10.255.0.2",
+        "10.255.0.3"
+      ],
+      "expected_routes": [
+        "10.255.0.3/32"
+      ],
+      "missing_routes": []
+    },
+    "data_plane": [
+      {
+        "target": "10.255.0.3",
+        "passed": true
+      }
+    ],
+    "controlled_failure": {
+      "device": "FRR-R4",
+      "action": "deploy",
+      "success": false,
+      "message": "Lỗi triển khai cấu hình trên FRR-R4: Xác minh sau deploy thất bại: {'passed': False, 'actual_change_verified': True, 'reason': 'controlled rollback test'}",
+      "data": {
+        "rolled_back": true,
+        "rollback_attempted": true,
+        "rollback_error": null,
+        "push_started": true,
+        "adapter_error_code": null,
+        "may_have_applied": true
+      },
+      "error_code": "DEPLOY_EXECUTION_ERROR"
+    },
+    "after_rollback": {
+      "device_name": "FRR-R4",
+      "passed": true,
+      "exact_hash_match": true,
+      "missing_lines": [],
+      "unexpected_lines": [],
+      "missing_line_count": 0,
+      "unexpected_line_count": 0,
+      "verification_mode": "exact-configuration",
+      "conflicting_hostname": false,
+      "wrong_hostname": false,
+      "actual_hostnames": [
+        "frr"
+      ]
+    },
+    "after_rollback_convergence": {
+      "device_name": "FRR-R4",
+      "passed": true,
+      "verification_mode": "ospf-convergence",
+      "neighbors": {
+        "10.255.0.1": [
+          "Full/Backup"
+        ],
+        "10.255.0.2": [
+          "Full/DR"
+        ],
+        "10.255.0.3": [
+          "2-Way/DROther"
+        ]
+      },
+      "expected_neighbors": [
+        "10.255.0.1",
+        "10.255.0.2",
+        "10.255.0.3"
+      ],
+      "expected_routes": [
+        "10.255.0.3/32"
+      ],
+      "missing_routes": []
+    },
+    "restore": {
+      "device": "FRR-R4",
+      "action": "restore",
+      "success": true,
+      "message": "Khôi phục cấu hình thành công",
+      "data": {
+        "snapshot_id": "FRR-R4_20261118_145845_44f59fa7",
+        "recovery_snapshot_id": "FRR-R4_20261118_150056_1bf5f9b6",
+        "device_name": "FRR-R4",
+        "passed": true,
+        "exact_hash_match": true,
+        "missing_lines": [],
+        "unexpected_lines": [],
+        "missing_line_count": 0,
+        "unexpected_line_count": 0,
+        "verification_mode": "exact-configuration",
+        "conflicting_hostname": false,
+        "wrong_hostname": false,
+        "actual_hostnames": [
+          "frr"
+        ]
+      },
+      "error_code": null
+    }
+  }
+]

@@ -84,6 +84,7 @@ class RestoreManager:
                         'Pre-restore backup failed; no restore was sent'
                         f' [{saved.error_code or "UNKNOWN"}]'
                     )
+                    raise RuntimeError('Pre-restore backup failed; no restore was sent')
                 recovery_id = saved.data.get('snapshot_id')
                 candidates = [s for s in manager.list_snapshots(device_name) if s.snapshot_id == recovery_id]
                 if len(candidates) != 1 or not self.validate_snapshot(device, candidates[0]):

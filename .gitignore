@@ -11,3 +11,6 @@ reports/
 *.egg-info/
 .vscode/
 .DS_Store
+
+private/
+pytest-of-*/
