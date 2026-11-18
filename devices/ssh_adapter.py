@@ -1,10 +1,14 @@
 """Read-only NetworkDevice adapter shared by TV2/TV3/TV4/TV5."""
 import re
+import logging
+import math
+import time
 from functools import partial
 from typing import List, Optional
 
 from netmiko import ConnectHandler
 from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException, ReadTimeout
+from paramiko import SSHException
 
 from core.base import NetworkDevice
 from core.commands import COLLECTION_COMMANDS
@@ -14,6 +18,8 @@ from core.exceptions import (DeviceAuthenticationError, DeviceConnectionError,
                              DeviceTimeoutError, DeviceCommandError,
                              UnsupportedFeatureError)
 
+logger = logging.getLogger(__name__)
+
 
 class SSHAdapter(NetworkDevice):
     write_scopes = ()
@@ -22,15 +28,21 @@ class SSHAdapter(NetworkDevice):
     def __init__(self, info: DeviceInfo, host: Optional[str] = None,
                  username: Optional[str] = None, password: Optional[str] = None,
                  timeout: float = 30, known_hosts: Optional[str] = None,
-                 frr_shell: str = "auto"):
+                 frr_shell: str = "auto", export_read_timeout: Optional[float] = None,
+                 export_retries: int = 1):
         if not isinstance(info, DeviceInfo):
             raise TypeError("info must be DeviceInfo")
         if info.platform not in self.DRIVERS or not info.host or not info.name:
             raise ValueError("Expected mikrotik/frr and nonempty device name/host")
         if host is not None and host != info.host:
             raise ValueError("host must match info.host")
-        if not 1 <= info.port <= 65535 or timeout <= 0:
+        if not 1 <= info.port <= 65535 or not math.isfinite(timeout) or timeout <= 0:
             raise ValueError("Invalid port or timeout")
+        export_read_timeout = timeout if export_read_timeout is None else export_read_timeout
+        if not math.isfinite(export_read_timeout) or export_read_timeout <= 0:
+            raise ValueError('export_read_timeout must be positive and finite')
+        if type(export_retries) is not int or export_retries not in (0, 1):
+            raise ValueError('export_retries must be 0 or 1')
         if (username is None) != (password is None):
             raise ValueError("Provide both username/password or use credential_ref")
         if frr_shell not in {"auto", "linux", "vtysh"}:
@@ -40,6 +52,94 @@ class SSHAdapter(NetworkDevice):
         self.frr_shell = frr_shell
         self._username, self._password = username, password
         self._connection = None
+        self.export_read_timeout = export_read_timeout
+        self.export_retries = export_retries
+        self.export_diagnostics = []
+
+    def _routeros_export(self):
+        """Retry only the allowlisted read, never a deploy/restore operation.
+
+        Keep the terminating prompt until validation, so neither a timeout nor
+        RouterOS' own partial-export error can become a successful snapshot.
+        """
+        if self._connection is None:
+            raise DeviceConnectionError('Device is not connected')
+        self.export_diagnostics = []
+        for attempt in range(1, self.export_retries + 2):
+            started = time.monotonic()
+            phase, reason, received = 'prompt_refresh', 'PROMPT_INVALID', None
+            retryable = False
+            error_type = DeviceCommandError
+            try:
+                if attempt > 1:
+                    phase = 'reconnect'
+                    self.connect()  # Same strict host keys and runtime credentials.
+                phase = 'prompt_refresh'
+                base = self._connection.set_base_prompt(
+                    pattern=r'(?m:^[ \t]*\[[^\]\r\n]+@[^\]\r\n]+\][ \t]*>[ \t]*$)')
+                if not isinstance(base, str) or not re.fullmatch(r'\[[^\]\r\n]+@[^\]\r\n]+\]', base):
+                    raise DeviceCommandError('Invalid RouterOS root prompt')
+                pattern = r'(?m:^[ \t]*' + re.escape(base) + r'[ \t]*>[ \t\r\n]*\Z)'
+                phase, reason = 'export_read', 'EXPORT_INVALID'
+                raw = self._connection.send_command(
+                    '/export terse', expect_string=pattern, auto_find_prompt=False,
+                    read_timeout=self.export_read_timeout, cmd_verify=True,
+                    strip_prompt=False, strip_command=True)
+                phase = 'export_validation'
+                if not isinstance(raw, str):
+                    raise DeviceCommandError('Invalid RouterOS export response')
+                received = len(raw.encode('utf-8'))
+                raw = raw.replace('\r\n', '\n').replace('\r', '\n')
+                if re.search(r'(?mi)^\s*#\s*error\s+exporting\b', raw):
+                    reason = 'EXPORT_INCOMPLETE'
+                    raise DeviceCommandError('RouterOS reported an incomplete export')
+                end = re.search(pattern, raw)
+                if end is None:
+                    reason = 'EXPORT_INCOMPLETE'
+                    raise DeviceCommandError('Missing RouterOS export terminator')
+                content = raw[:end.start()]
+                if (not re.search(r'(?mi)^#.*RouterOS', content)
+                        or not re.search(r'(?m)^/[a-z]', content)
+                        or self._has_error(content)):
+                    raise DeviceCommandError('Invalid RouterOS export content')
+                self.export_diagnostics.append(dict(
+                    attempt=attempt, phase='complete', code='OK', received_bytes=received,
+                    elapsed_ms=round((time.monotonic()-started)*1000),
+                    timeout_s=self.export_read_timeout))
+                return content
+            except (ReadTimeout, NetmikoTimeoutException, TimeoutError) as exc:
+                if phase == 'export_read':
+                    # Inspect locally for classification only; never log raw exceptions.
+                    detail = str(exc).lower()
+                    phase = ('command_echo' if 'command echo' in detail else
+                             'output_prompt' if 'pattern not detected' in detail else 'export_read')
+                reason, error_type = 'EXPORT_TIMEOUT', DeviceTimeoutError
+                retryable = phase != 'reconnect'
+            except (OSError, EOFError, SSHException):
+                reason, error_type = 'EXPORT_CONNECTION_LOST', DeviceConnectionError
+                retryable = phase != 'reconnect'
+            except DeviceAuthenticationError:
+                reason, error_type = 'EXPORT_AUTH_FAILED', DeviceAuthenticationError
+            except DeviceTimeoutError:
+                reason, error_type = 'EXPORT_TIMEOUT', DeviceTimeoutError
+            except DeviceConnectionError:
+                reason, error_type = 'EXPORT_CONNECTION_LOST', DeviceConnectionError
+            except Exception:
+                # Validation/rejected output is not retried as if it were transport loss.
+                pass
+            self._close_on_error()
+            diagnostic = dict(attempt=attempt, phase=phase, code=reason,
+                              elapsed_ms=round((time.monotonic()-started)*1000),
+                              timeout_s=self.export_read_timeout, received_bytes=received)
+            self.export_diagnostics.append(diagnostic)
+            logger.warning('RouterOS export failed: phase=%s code=%s attempt=%d elapsed_ms=%d timeout_s=%s',
+                           phase, reason, attempt, diagnostic['elapsed_ms'], self.export_read_timeout)
+            if retryable and attempt <= self.export_retries:
+                continue
+            error = error_type(f'{reason}; phase={phase}; attempt={attempt}')
+            error.code = reason
+            error.diagnostics = tuple(dict(item) for item in self.export_diagnostics)
+            raise error from None
 
     def _close_on_error(self):
         try:
@@ -125,6 +225,8 @@ class SSHAdapter(NetworkDevice):
         if command not in allowed:
             raise DeviceCommandError("Read-only adapter: command is not supported")
         if self.info.platform == "mikrotik":
+            if command == config_command:
+                return self._routeros_export()
             # An empty RouterOS table is a valid collection result.
             output = self._read(command, allow_empty=command.endswith("terse without-paging"))
         else:
@@ -141,13 +243,6 @@ class SSHAdapter(NetworkDevice):
         return output
 
     def get_running_config(self) -> str:
-        if self._connection is not None and self.info.platform == "mikrotik":
-            # Refresh before exports too: the first read can contain a stale prompt.
-            try:
-                self._connection.set_base_prompt()
-            except Exception:
-                self._close_on_error()
-                raise DeviceCommandError("Cannot refresh SSH prompt") from None
         command = "/export terse" if self.info.platform == "mikrotik" else "show running-config"
         output = self.send_command(command)
         if self.info.platform == "mikrotik":
@@ -190,7 +285,9 @@ class SSHAdapter(NetworkDevice):
 def register_device_adapters(*, timeout: float = 30,
                              known_hosts: Optional[str] = None,
                              frr_shell: str = "auto", write: bool = False,
-                             write_scope: str = 'managed') -> None:
+                             write_scope: str = 'managed',
+                             export_read_timeout: Optional[float] = None,
+                             export_retries: int = 1) -> None:
     """Register builders; credentials are resolved at connect(), per TV1 contract."""
     from core.factory import DeviceFactory
     if write:
@@ -203,11 +300,13 @@ def register_device_adapters(*, timeout: float = 30,
             adapter = OSPFSSHAdapter
         for platform in ('mikrotik', 'frr'):
             DeviceFactory.register(platform, partial(adapter, timeout=timeout,
-                known_hosts=known_hosts, frr_shell=frr_shell))
+                known_hosts=known_hosts, frr_shell=frr_shell,
+                export_read_timeout=export_read_timeout, export_retries=export_retries))
         return
     from devices.mikrotik import MikroTikDevice
     from devices.frr import FRRDevice
     DeviceFactory.register("mikrotik", partial(
-        MikroTikDevice, timeout=timeout, known_hosts=known_hosts))
+        MikroTikDevice, timeout=timeout, known_hosts=known_hosts,
+        export_read_timeout=export_read_timeout, export_retries=export_retries))
     DeviceFactory.register("frr", partial(
         FRRDevice, timeout=timeout, known_hosts=known_hosts, frr_shell=frr_shell))
